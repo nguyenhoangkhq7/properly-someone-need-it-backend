@@ -1,3 +1,4 @@
+// src/models/Item.ts
 import { Schema, model, Document } from "mongoose";
 import type { ObjectId } from "../types/index.js";
 
@@ -6,27 +7,38 @@ export interface IItemLocation {
   coordinates: [number, number];
 }
 
-// src/models/Item.ts
-
 export interface IItem extends Document {
   _id: ObjectId;
   sellerId: ObjectId;
+
   title: string;
   description: string;
-  category: "PHONE" | "LAPTOP" | "TABLET" | "ACCESSORY" | "OTHER";
+
+  category:
+    | "PHONE"
+    | "LAPTOP"
+    | "TABLET"
+    | "WATCH"
+    | "HEADPHONE"
+    | "ACCESSORY"
+    | "OTHER";
   subcategory?: string;
-  tags: string[];
   brand?: string;
-  deviceModel?: string;
-  condition: "NEW" | "LIKE_NEW" | "GOOD" | "FAIR" | "POOR";
+  modelName?: string;
+
+  condition: "LIKE_NEW" | "GOOD" | "FAIR" | "POOR";
+
   price: number;
-  originalPrice?: number;
   isNegotiable: boolean;
+
   images: string[];
   location: IItemLocation;
-  status: "ACTIVE" | "SOLD" | "PENDING" | "DELETED";
+
+  status: "ACTIVE" | "PENDING" | "SOLD" | "DELETED";
+
   views: number;
   favoritesCount: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,42 +46,55 @@ export interface IItem extends Document {
 const itemSchema = new Schema<IItem>(
   {
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
+
     category: {
       type: String,
-      enum: ["PHONE", "LAPTOP", "TABLET", "ACCESSORY", "OTHER"],
+      enum: [
+        "PHONE",
+        "LAPTOP",
+        "TABLET",
+        "WATCH",
+        "HEADPHONE",
+        "ACCESSORY",
+        "OTHER",
+      ],
       required: true,
     },
     subcategory: String,
-    tags: [{ type: String, lowercase: true }],
     brand: String,
-    deviceModel: String,
+    modelName: String,
+
     condition: {
       type: String,
-      enum: ["NEW", "LIKE_NEW", "GOOD", "FAIR", "POOR"],
+      enum: ["LIKE_NEW", "GOOD", "FAIR", "POOR"],
       required: true,
     },
+
     price: { type: Number, required: true, min: 0 },
-    originalPrice: { type: Number, min: 0 },
     isNegotiable: { type: Boolean, default: true },
-    images: [{ type: String }],
+
+    images: [{ type: String, required: true }],
+
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], required: true },
     },
+
     status: {
       type: String,
-      enum: ["ACTIVE", "SOLD", "PENDING", "DELETED"],
+      enum: ["ACTIVE", "PENDING", "SOLD", "DELETED"],
       default: "ACTIVE",
     },
+
     views: { type: Number, default: 0 },
     favoritesCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-// Indexes
 itemSchema.index({ location: "2dsphere" });
 itemSchema.index({ category: 1, subcategory: 1 });
 itemSchema.index({ status: 1 });

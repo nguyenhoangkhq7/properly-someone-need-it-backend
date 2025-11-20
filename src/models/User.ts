@@ -1,5 +1,5 @@
+// src/models/User.ts
 import { Schema, model, Document } from "mongoose";
-import bcrypt from "bcryptjs";
 import type { ObjectId } from "../types/index.js";
 
 export interface ILocation {
@@ -7,84 +7,78 @@ export interface ILocation {
   coordinates: [number, number];
 }
 
-export interface IAccount {
-  username: string;
-  password: string;
-  email: string;
-}
-
 export interface IUser extends Document {
   _id: ObjectId;
   fullName: string;
-  account: IAccount;
-  role: "USER" | "ADMIN";
-  phone?: string;
-  address?: {
-    street?: string;
+  phone: string;
+  avatar?: string;
+
+  address: {
+    city: string;
     district?: string;
-    city?: string;
     location?: ILocation;
   };
-  wishlist: string[]; // lưu item._id dưới dạng string
-  avatar?: string;
+
   rating: number;
   reviewCount: number;
+  successfulTrades: number;
+  cancelledTrades: number;
+  trustScore: number;
+
   isVerified: boolean;
-  fcmToken?: string;
+  verifiedAt?: Date;
+
+  isBanned: boolean;
+  banReason?: string;
+  bannedAt?: Date;
+
+  fcmTokens: string[];
+  lastActiveAt: Date;
+
   createdAt: Date;
   updatedAt: Date;
-
-  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
-    account: {
-      username: { type: String, required: true, unique: true, trim: true },
-      password: { type: String, required: true, minlength: 6 },
-      email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-      },
-    },
-    role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
-    phone: { type: String, trim: true },
+    phone: { type: String, required: true, unique: true, trim: true },
+
+    avatar: String,
+
     address: {
-      street: String,
+      city: { type: String, required: true },
       district: String,
-      city: String,
       location: {
         type: { type: String, enum: ["Point"], default: "Point" },
         coordinates: { type: [Number], default: [0, 0] },
       },
     },
-    wishlist: [{ type: String }], // string[]
-    avatar: String,
-    rating: { type: Number, default: 0, min: 0, max: 5 },
+
+    rating: { type: Number, default: 5.0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
+    successfulTrades: { type: Number, default: 0 },
+    cancelledTrades: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 100, min: 0, max: 100 },
+
     isVerified: { type: Boolean, default: false },
-    fcmToken: String,
+    verifiedAt: Date,
+
+    isBanned: { type: Boolean, default: false },
+    banReason: String,
+    bannedAt: Date,
+
+    fcmTokens: [{ type: String }],
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-// Hash password
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("account.password")) return next();
-  this.account.password = await bcrypt.hash(this.account.password, 10);
-  next();
-});
-
-userSchema.methods.comparePassword = async function (
-  candidatePassword: string
-) {
-  return bcrypt.compare(candidatePassword, this.account.password);
-};
-
+// Index quan trọng
 userSchema.index({ "address.location": "2dsphere" });
+userSchema.index({ phone: 1 });
+userSchema.index({ trustScore: -1 });
+userSchema.index({ successfulTrades: -1 });
+userSchema.index({ rating: -1 });
 
 export const User = model<IUser>("User", userSchema);

@@ -1,3 +1,4 @@
+// src/models/Message.ts
 import { Schema, model, Document } from "mongoose";
 import type { ObjectId } from "../types/index.js";
 
@@ -5,9 +6,12 @@ export interface IMessage extends Document {
   _id: ObjectId;
   chatRoomId: ObjectId;
   senderId: ObjectId;
-  content: string;
+  content?: string;
+  messageType: "TEXT" | "IMAGE" | "LOCATION" | "MEETUP_CONFIRM";
+  attachmentUrl?: string; // ảnh hoặc JSON địa điểm
+
   sentAt: Date;
-  read: boolean;
+  isRead: boolean;
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -18,8 +22,14 @@ const messageSchema = new Schema<IMessage>(
       required: true,
     },
     senderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    content: { type: String, required: true, trim: true },
-    read: { type: Boolean, default: false },
+    content: String,
+    messageType: {
+      type: String,
+      enum: ["TEXT", "IMAGE", "LOCATION", "MEETUP_CONFIRM"],
+      default: "TEXT",
+    },
+    attachmentUrl: String,
+    isRead: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: "sentAt", updatedAt: false } }
 );
