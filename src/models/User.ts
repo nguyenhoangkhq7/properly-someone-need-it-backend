@@ -10,6 +10,7 @@ export interface ILocation {
 export interface IUser extends Document {
   _id: ObjectId;
   fullName: string;
+  email: string;
   phone: string;
   avatar?: string;
 
@@ -42,6 +43,7 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     phone: { type: String, required: true, unique: true, trim: true },
 
     avatar: String,
@@ -76,6 +78,7 @@ const userSchema = new Schema<IUser>(
 
 // Index quan trọng
 userSchema.index({ "address.location": "2dsphere" });
+userSchema.index({ email: 1 });
 userSchema.index({ phone: 1 });
 userSchema.index({ trustScore: -1 });
 userSchema.index({ successfulTrades: -1 });

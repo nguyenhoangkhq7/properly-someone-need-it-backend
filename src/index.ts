@@ -1,21 +1,23 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { connectDB } from "./config/db/index.js";
+import { env } from "./config/env.js";
+import authRouter from "./routes/auth.js";
+import reviewRouter from "./routes/reviews.js";
 
 const app = express();
-const PORT = 3000;
 
 connectDB();
 
-// Middleware để parse JSON
 app.use(express.json());
 
-// Route test
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello TypeScript + Express!");
+app.use(`${env.API_PREFIX}/auth`, authRouter);
+app.use(`${env.API_PREFIX}/reviews`, reviewRouter);
+
+app.get("/", (_req: Request, res: Response) => {
+  res.send("Properly Someone Need It API");
 });
 
-// Lắng nghe cổng
-app.listen(PORT, () => {
-  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+app.listen(env.PORT, () => {
+  console.log(`Server đang chạy tại http://localhost:${env.PORT}`);
 });
