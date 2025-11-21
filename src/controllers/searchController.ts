@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 import { Item, type IItem } from "../models/Item.js";
+import { SearchHistory } from "../models/SearchHistory.js";
+import { Types } from "mongoose";
 import { getEmbedding } from "../services/embeddingService.js";
 
 const cosineSimilarity = (a: number[], b: number[]) => {
@@ -22,6 +24,7 @@ const cosineSimilarity = (a: number[], b: number[]) => {
 export const semanticSearch = async (req: Request, res: Response) => {
   try {
     const rawQuery = (req.query.q ?? req.query.query ?? "").toString().trim();
+    const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
     const limit = Number(req.query.limit ?? 20);
 
     if (!rawQuery) {
@@ -48,6 +51,27 @@ export const semanticSearch = async (req: Request, res: Response) => {
         success: true,
         data: [],
         message: "Chưa có dữ liệu embedding cho Item. Hãy backfill trước.",
+      });
+    }
+
+    if (userId && Types.ObjectId.isValid(userId)) {
+      try {
+        const doc = await SearchHistory.create({
+          userId: new Types.ObjectId(userId),
+          query: rawQuery,
+        });
+        const idStr = String((doc as any)?._id ?? "");
+        console.log("[SearchHistory] saved", {
+          _id: idStr,
+          userId,
+          query: rawQuery,
+        });
+      } catch (err) {
+        console.error("Log search history error:", err);
+      }
+    } else {
+      console.log("[SearchHistory] skip log, invalid or missing userId", {
+        userId,
       });
     }
 

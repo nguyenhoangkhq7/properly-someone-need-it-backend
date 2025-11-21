@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
+import { Types } from "mongoose";
 import { Item } from "../models/Item.js";
+import { ViewedItem } from "../models/ViewedItem.js";
 
 // =======================
 // 1) GET ALL ITEMS
@@ -36,6 +38,15 @@ export const getItemById = async (req: Request, res: Response) => {
         success: false,
         message: "Không tìm thấy sản phẩm",
       });
+    }
+
+    const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
+    if (userId && Types.ObjectId.isValid(userId)) {
+      ViewedItem.create({
+        userId,
+        itemId: item._id,
+        viewedAt: new Date(),
+      }).catch((err) => console.error("Log viewed item error:", err));
     }
 
     return res.json({
