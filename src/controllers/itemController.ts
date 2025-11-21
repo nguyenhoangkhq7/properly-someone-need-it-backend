@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { Types } from "mongoose";
 import { Item } from "../models/Item.js";
 import { ViewedItem } from "../models/ViewedItem.js";
+import { SearchHistory } from "../models/SearchHistory.js";
 
 // =======================
 // 1) GET ALL ITEMS
@@ -146,6 +147,36 @@ export const getRecommendedItems = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Lỗi khi lấy recommended items",
+    });
+  }
+};
+
+// =======================
+// 6) GET ITEMS BY CATEGORY
+// =======================
+export const getItemsByCategory = async (req: Request, res: Response) => {
+  try {
+    const { category } = req.params;
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu category",
+      });
+    }
+
+    const items = await Item.find({
+      status: "ACTIVE",
+      category: category.toUpperCase(),
+    }).sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      data: items,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server khi lấy items theo category",
     });
   }
 };

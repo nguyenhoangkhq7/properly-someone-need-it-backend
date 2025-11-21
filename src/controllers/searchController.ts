@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
 import { Item, type IItem } from "../models/Item.js";
 import { SearchHistory } from "../models/SearchHistory.js";
 import { Types } from "mongoose";
@@ -26,15 +26,34 @@ export const semanticSearch = async (req: Request, res: Response) => {
     const rawQuery = (req.query.q ?? req.query.query ?? "").toString().trim();
     const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
     const limit = Number(req.query.limit ?? 20);
+    const MIN_SIMILARITY = 0.35; // filter out weak matches
+    const EMBEDDING_MAX_RETRY = 3;
 
     if (!rawQuery) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu tham số q (query string).",
+        message: "Thiu tham s q (query string).",
       });
     }
 
-    const queryEmbedding = await getEmbedding(rawQuery);
+    let queryEmbedding: number[] | null = null;
+    let lastEmbeddingError: unknown;
+    for (let attempt = 1; attempt <= EMBEDDING_MAX_RETRY; attempt += 1) {
+      try {
+        queryEmbedding = await getEmbedding(rawQuery);
+        if (queryEmbedding?.length) break;
+      } catch (err) {
+        lastEmbeddingError = err;
+      }
+    }
+
+    if (!queryEmbedding || !queryEmbedding.length) {
+      console.error("Failed to generate embedding after retries:", lastEmbeddingError);
+      return res.status(502).json({
+        success: false,
+        message: "Failed to generate query embedding. Please try again.",
+      });
+    }
 
     const rawItems = await Item.find({
       status: "ACTIVE",
@@ -50,7 +69,7 @@ export const semanticSearch = async (req: Request, res: Response) => {
       return res.status(200).json({
         success: true,
         data: [],
-        message: "Chưa có dữ liệu embedding cho Item. Hãy backfill trước.",
+        message: "Cha c d liu embedding cho Item. Hy backfill trbc.",
       });
     }
 
@@ -76,11 +95,20 @@ export const semanticSearch = async (req: Request, res: Response) => {
     }
 
     const scored = items
-      .map((item) => ({
-        item,
-        score: cosineSimilarity(queryEmbedding, item.embedding ?? []),
-      }))
-      .filter((s) => s.score > 0)
+      .map((item) => {
+        const baseScore = cosineSimilarity(
+          queryEmbedding,
+          item.embedding ?? []
+        );
+        const textBlob = `${item.title} ${item.description}`.toLowerCase();
+        const kw = rawQuery.toLowerCase();
+        const keywordBonus = textBlob.includes(kw) ? 0.1 : 0; // boost exact substring match
+        return {
+          item,
+          score: baseScore + keywordBonus,
+        };
+      })
+      .filter((s) => s.score >= MIN_SIMILARITY)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
@@ -97,7 +125,7 @@ export const semanticSearch = async (req: Request, res: Response) => {
     console.error("Semantic search error:", err);
     return res.status(500).json({
       success: false,
-      message: "Lỗi server khi thực hiện semantic search",
+      message: "L-i server khi thc hifn semantic search",
     });
   }
 };
