@@ -76,7 +76,6 @@ const userSchema = new Schema<IUser>(
 
 // Index quan trọng
 userSchema.index({ "address.location": "2dsphere" });
-userSchema.index({ phone: 1 });
 userSchema.index({ trustScore: -1 });
 userSchema.index({ successfulTrades: -1 });
 userSchema.index({ rating: -1 });
