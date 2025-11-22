@@ -4,6 +4,119 @@ import { SearchHistory } from "../models/SearchHistory.js";
 import { Types } from "mongoose";
 import { getEmbedding } from "../services/embeddingService.js";
 
+type ItemCategory = IItem["category"];
+
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const CATEGORY_KEYWORDS: Record<ItemCategory, string[]> = {
+  PHONE: [
+    "dien thoai",
+    "smartphone",
+    "iphone",
+    "android",
+    "samsung",
+    "oppo",
+    "xiaomi",
+    "realme",
+    "vivo",
+    "nokia",
+    "pixel",
+    "oneplus",
+  ],
+  LAPTOP: [
+    "laptop",
+    "macbook",
+    "notebook",
+    "thinkpad",
+    "msi",
+    "asus",
+    "acer",
+    "lenovo legion",
+    "ideapad",
+    "surface laptop",
+  ],
+  TABLET: [
+    "tablet",
+    "ipad",
+    "galaxy tab",
+    "lenovo tab",
+    "surface pro",
+    "xiaomi pad",
+  ],
+  WATCH: [
+    "dong ho",
+    "apple watch",
+    "galaxy watch",
+    "smartwatch",
+    "watch gt",
+    "mi band",
+  ],
+  HEADPHONE: [
+    "tai nghe",
+    "headphone",
+    "earbud",
+    "earbuds",
+    "airpods",
+    "beats",
+    "sony wf",
+    "sony wh",
+    "gaming headset",
+  ],
+  ACCESSORY: [
+    "phu kien",
+    "op lung",
+    "op iphone",
+    "bao da",
+    "cuong luc",
+    "mieng dan",
+    "sac",
+    "cap",
+    "cu sac",
+    "adapter",
+    "sac du phong",
+    "case",
+    "dock",
+    "the nho",
+    "sim",
+  ],
+  OTHER: [],
+};
+
+const detectStrongCategory = (normalizedQuery: string): ItemCategory | null => {
+  const hits = new Set<ItemCategory>();
+  (
+    Object.entries(CATEGORY_KEYWORDS) as Array<[ItemCategory, string[]]>
+  ).forEach(([category, keywords]) => {
+    if (keywords.some((kw) => normalizedQuery.includes(kw))) {
+      hits.add(category);
+    }
+  });
+  return hits.size === 1 ? Array.from(hits)[0] : null;
+};
+
+const computeKeywordBonus = (
+  normalizedQuery: string,
+  normalizedTokens: string[],
+  normalizedText: string
+) => {
+  const tokenHits = normalizedTokens.filter(
+    (token) => token.length > 2 && normalizedText.includes(token)
+  ).length;
+  const tokenBonus = tokenHits ? Math.min(0.15, tokenHits * 0.03) : 0;
+  const phraseBonus =
+    normalizedQuery.length > 6 && normalizedText.includes(normalizedQuery)
+      ? 0.05
+      : 0;
+  return tokenBonus + phraseBonus;
+};
+
 const cosineSimilarity = (a: number[], b: number[]) => {
   if (!a.length || !b.length || a.length !== b.length) return 0;
 
@@ -26,7 +139,6 @@ export const semanticSearch = async (req: Request, res: Response) => {
     const rawQuery = (req.query.q ?? req.query.query ?? "").toString().trim();
     const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
     const limit = Number(req.query.limit ?? 20);
-    const MIN_SIMILARITY = 0.35; // filter out weak matches
     const EMBEDDING_MAX_RETRY = 3;
 
     if (!rawQuery) {
@@ -35,6 +147,11 @@ export const semanticSearch = async (req: Request, res: Response) => {
         message: "Thiu tham s q (query string).",
       });
     }
+
+    const normalizedQuery = normalizeText(rawQuery);
+    const normalizedTokens = normalizedQuery.split(" ").filter(Boolean);
+    const strongCategory = detectStrongCategory(normalizedQuery);
+    const MIN_SIMILARITY = strongCategory ? 0.3 : 0.4; // tighten when query is ambiguous
 
     let queryEmbedding: number[] | null = null;
     let lastEmbeddingError: unknown;
@@ -58,12 +175,16 @@ export const semanticSearch = async (req: Request, res: Response) => {
       });
     }
 
-    const rawItems = await Item.find({
+    const itemFilter: Record<string, unknown> = {
       status: "ACTIVE",
       embedding: { $exists: true, $ne: [] },
-    })
-      .lean()
-      .exec();
+    };
+
+    if (strongCategory) {
+      itemFilter.category = strongCategory; // avoid cross-category matches (e.g., phone vs tablet)
+    }
+
+    const rawItems = await Item.find(itemFilter).lean().exec();
     const items = rawItems as unknown as Array<
       IItem & { embedding?: number[] }
     >;
@@ -103,12 +224,21 @@ export const semanticSearch = async (req: Request, res: Response) => {
           queryEmbedding,
           item.embedding ?? []
         );
-        const textBlob = `${item.title} ${item.description}`.toLowerCase();
-        const kw = rawQuery.toLowerCase();
-        const keywordBonus = textBlob.includes(kw) ? 0.1 : 0; // boost exact substring match
+        const normalizedTextBlob = normalizeText(
+          `${item.title} ${item.description} ${item.brand ?? ""} ${
+            item.modelName ?? ""
+          } ${item.category} ${item.subcategory ?? ""}`
+        );
+        const keywordBonus = computeKeywordBonus(
+          normalizedQuery,
+          normalizedTokens,
+          normalizedTextBlob
+        );
+        const categoryBoost =
+          strongCategory && item.category === strongCategory ? 0.15 : 0;
         return {
           item,
-          score: baseScore + keywordBonus,
+          score: baseScore + keywordBonus + categoryBoost,
         };
       })
       .filter((s) => s.score >= MIN_SIMILARITY)

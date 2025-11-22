@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import { Types } from "mongoose";
 import { Item } from "../models/Item.js";
 import { ViewedItem } from "../models/ViewedItem.js";
-import { SearchHistory } from "../models/SearchHistory.js";
 
 // =======================
 // 1) GET ALL ITEMS
