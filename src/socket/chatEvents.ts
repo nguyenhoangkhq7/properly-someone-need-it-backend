@@ -23,7 +23,4 @@ export const chatEvents = {
   typingUpdated(roomId: string, payload: unknown) {
     chatServer?.to(roomId).emit("typing:update", payload);
   },
-  typingCleared(roomId: string) {
-    chatServer?.to(roomId).emit("typing:cleared", { roomId });
-  },
 };

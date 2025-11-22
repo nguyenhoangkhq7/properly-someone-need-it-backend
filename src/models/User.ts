@@ -7,12 +7,16 @@ export interface ILocation {
   coordinates: [number, number];
 }
 
+export type UserRole = "user" | "admin";
+
 export interface IUser extends Document {
   _id: ObjectId;
   fullName: string;
   email: string;
   phone: string;
   avatar?: string;
+  role: UserRole;
+  refreshToken?: string | null;
 
   address: {
     city: string;
@@ -47,6 +51,8 @@ const userSchema = new Schema<IUser>(
     phone: { type: String, required: true, unique: true, trim: true },
 
     avatar: String,
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    refreshToken: { type: String, default: null },
 
     address: {
       city: { type: String, required: true },

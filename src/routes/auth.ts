@@ -1,9 +1,10 @@
 import { Router } from "express";
-import type { Request, Response } from "express";
+import type { CookieOptions, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { env } from "../config/env.js";
 import { User, EmailOtp, type OtpPurpose } from "../models/index.js";
+import type { IUser } from "../models/User.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import {
   signAccessToken,
@@ -16,6 +17,28 @@ import requireAuth from "../middleware/requireAuth.js";
 const router = Router();
 const MAX_OTP_ATTEMPTS = env.OTP_MAX_ATTEMPTS;
 const OTP_TTL_MS = env.OTP_TTL_MINUTES * 60 * 1000;
+const REFRESH_COOKIE_NAME = "psni_refresh";
+const REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 ngày
+const isProduction = process.env.NODE_ENV === "production";
+
+const buildRefreshCookieOptions = (): CookieOptions => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: REFRESH_COOKIE_MAX_AGE,
+  path: `${env.API_PREFIX}/auth`,
+});
+
+const setRefreshTokenCookie = (res: Response, token: string) => {
+  res.cookie(REFRESH_COOKIE_NAME, token, buildRefreshCookieOptions());
+};
+
+const clearRefreshTokenCookie = (res: Response) => {
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    ...buildRefreshCookieOptions(),
+    maxAge: 0,
+  });
+};
 
 class AuthError extends Error {
   statusCode: number;
@@ -92,10 +115,17 @@ const ensureValidPhone = (rawPhone: string): string => {
   return phone;
 };
 
-const createTokens = (userId: string) => ({
-  accessToken: signAccessToken(userId),
-  refreshToken: signRefreshToken(userId),
+const createTokens = (user: Pick<IUser, "_id" | "role">) => ({
+  accessToken: signAccessToken(user._id.toString(), user.role),
+  refreshToken: signRefreshToken(user._id.toString(), user.role),
 });
+
+const issueTokensForUser = async (user: IUser) => {
+  const tokens = createTokens(user);
+  user.refreshToken = tokens.refreshToken;
+  await user.save();
+  return tokens;
+};
 
 const buildOtpExpiry = (): Date => new Date(Date.now() + OTP_TTL_MS);
 
@@ -237,8 +267,13 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
       verifiedAt: new Date(),
     });
 
-    const tokens = createTokens(user._id.toString());
-    return sendSuccess(res, tokens, "Đăng ký thành công");
+    const tokens = await issueTokensForUser(user);
+    setRefreshTokenCookie(res, tokens.refreshToken);
+    return sendSuccess(
+      res,
+      { accessToken: tokens.accessToken, role: user.role },
+      "Đăng ký thành công"
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       return sendError(res, error.statusCode, error.message, error.errorCode);
@@ -265,8 +300,13 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
     await validateOtp(email, otp, "login");
 
-    const tokens = createTokens(user._id.toString());
-    return sendSuccess(res, tokens, "Đăng nhập thành công");
+    const tokens = await issueTokensForUser(user);
+    setRefreshTokenCookie(res, tokens.refreshToken);
+    return sendSuccess(
+      res,
+      { accessToken: tokens.accessToken, role: user.role },
+      "Đăng nhập thành công"
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       return sendError(res, error.statusCode, error.message, error.errorCode);
@@ -278,14 +318,9 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
 router.post("/refresh-token", async (req: Request, res: Response) => {
   try {
-    requireFields(["refreshToken"], req.body);
-    const refreshToken = String(req.body.refreshToken).trim();
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!refreshToken) {
-      throw new AuthError(
-        "Refresh token không hợp lệ.",
-        "REFRESH_INVALID",
-        400
-      );
+      throw new AuthError("Refresh token không tồn tại.", "REFRESH_INVALID", 401);
     }
 
     const payload = verifyRefreshToken(String(refreshToken));
@@ -298,8 +333,24 @@ router.post("/refresh-token", async (req: Request, res: Response) => {
       );
     }
 
-    const accessToken = signAccessToken(user._id.toString());
-    return sendSuccess(res, { accessToken }, "Refresh thành công");
+    if (!user.refreshToken || user.refreshToken !== refreshToken) {
+      user.refreshToken = null;
+      await user.save();
+      clearRefreshTokenCookie(res);
+      throw new AuthError(
+        "Refresh token không hợp lệ hoặc đã bị thu hồi.",
+        "REFRESH_INVALID",
+        401
+      );
+    }
+
+    const tokens = await issueTokensForUser(user);
+    setRefreshTokenCookie(res, tokens.refreshToken);
+    return sendSuccess(
+      res,
+      { accessToken: tokens.accessToken, role: user.role },
+      "Refresh thành công"
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       return sendError(res, error.statusCode, error.message, error.errorCode);
@@ -340,6 +391,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
       reviewCount,
       trustScore,
       successfulTrades,
+      role,
     } = user;
 
     return sendSuccess(
@@ -358,6 +410,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
         reviewCount,
         trustScore,
         successfulTrades,
+        role,
       },
       "Lấy thông tin người dùng thành công"
     );
@@ -367,6 +420,24 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
     }
     console.error("/me error", error);
     return sendError(res, 500, "Không thể lấy thông tin người dùng", "FETCH_PROFILE_FAILED");
+  }
+});
+
+router.post("/logout", requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (!req.userId) {
+      throw new AuthError("Bạn chưa đăng nhập.", "AUTH_REQUIRED", 401);
+    }
+
+    await User.findByIdAndUpdate(req.userId, { $set: { refreshToken: null } });
+    clearRefreshTokenCookie(res);
+    return sendSuccess(res, { success: true }, "Đăng xuất thành công");
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return sendError(res, error.statusCode, error.message, error.errorCode);
+    }
+    console.error("/logout error", error);
+    return sendError(res, 500, "Không thể đăng xuất", "LOGOUT_FAILED");
   }
 });
 

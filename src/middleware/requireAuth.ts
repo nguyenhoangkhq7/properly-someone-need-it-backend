@@ -18,6 +18,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = verifyAccessToken(token);
     req.userId = payload.userId;
+    req.userRole = payload.role;
     return next();
   } catch (error) {
     const isJwtError =

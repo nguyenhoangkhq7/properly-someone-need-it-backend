@@ -68,10 +68,6 @@ const updateTypingState = (roomId: string, userId: string, isTyping: boolean) =>
   return false;
 };
 
-export const clearRoomTypingState = async (roomId: string) => {
-  typingState.delete(roomId);
-};
-
 export const createChatGateway = (server: HTTPServer) => {
   const io = new Server(server, {
     cors: {
@@ -91,6 +87,7 @@ export const createChatGateway = (server: HTTPServer) => {
     try {
       const payload = verifyAccessToken(token);
       socket.data.userId = payload.userId;
+      socket.data.userRole = payload.role;
       next();
     } catch (error) {
       next(new Error("TOKEN_INVALID"));
@@ -103,7 +100,7 @@ export const createChatGateway = (server: HTTPServer) => {
 
     const safeJoin = async (roomId: string, ack?: Ack) => {
       try {
-        await chatService.getTypingLogs(roomId, userId);
+        await chatService.assertRoomAccess(roomId, userId);
         socket.join(roomId);
         joinedRooms.add(roomId);
         respond(ack, { success: true });
@@ -141,33 +138,21 @@ export const createChatGateway = (server: HTTPServer) => {
       }
     });
 
-    socket.on("typing:update", async ({ roomId, isTyping }: TypingUpdatePayload, ack?: Ack) => {
+    socket.on("typing:update", ({ roomId, isTyping }: TypingUpdatePayload, ack?: Ack) => {
       try {
-        const changed = updateTypingState(roomId, userId, isTyping);
-        if (!changed) {
-          respond(ack, { success: true });
+        if (!joinedRooms.has(roomId)) {
+          respond(ack, {
+            success: false,
+            error: "Bạn chưa tham gia phòng này.",
+            errorCode: "ROOM_NOT_JOINED",
+          });
           return;
         }
 
-        const logs = await chatService.appendTypingLog(roomId, userId, isTyping ? "START" : "STOP");
-        chatEvents.typingUpdated(roomId, {
-          roomId,
-          userId,
-          isTyping,
-          history: logs.history,
-          current: logs.current,
-        });
-        respond(ack, { success: true, data: logs });
-      } catch (error) {
-        handleSocketError(error, ack);
-      }
-    });
-
-    socket.on("typing:clear", async ({ roomId }: RoomPayload, ack?: Ack) => {
-      try {
-        await chatService.clearTypingLogs(roomId, userId);
-        typingState.delete(roomId);
-        chatEvents.typingCleared(roomId);
+        const changed = updateTypingState(roomId, userId, isTyping);
+        if (changed) {
+          chatEvents.typingUpdated(roomId, { roomId, userId, isTyping });
+        }
         respond(ack, { success: true });
       } catch (error) {
         handleSocketError(error, ack);
@@ -178,20 +163,7 @@ export const createChatGateway = (server: HTTPServer) => {
       joinedRooms.forEach((roomId) => {
         const changed = updateTypingState(roomId, userId, false);
         if (changed) {
-          chatService
-            .appendTypingLog(roomId, userId, "STOP")
-            .then((logs) => {
-              chatEvents.typingUpdated(roomId, {
-                roomId,
-                userId,
-                isTyping: false,
-                history: logs.history,
-                current: logs.current,
-              });
-            })
-            .catch((error) => {
-              console.error("Failed to log typing stop on disconnect", error);
-            });
+          chatEvents.typingUpdated(roomId, { roomId, userId, isTyping: false });
         }
       });
     });

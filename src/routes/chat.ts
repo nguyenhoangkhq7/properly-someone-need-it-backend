@@ -3,7 +3,6 @@ import requireAuth from "../middleware/requireAuth.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { chatService, ChatServiceError } from "../services/chatService.js";
 import { chatEvents } from "../socket/chatEvents.js";
-import { clearRoomTypingState } from "../socket/chatGateway.js";
 
 const router = Router();
 
@@ -85,35 +84,6 @@ router.patch("/rooms/:roomId/read", async (req, res) => {
     const snapshot = await chatService.getRoomSnapshot(roomId);
     chatEvents.roomUpdated(snapshot);
     return sendSuccess(res, result, "Đã đánh dấu đã đọc.");
-  } catch (error) {
-    return handleError(error, res);
-  }
-});
-
-router.get("/rooms/:roomId/typing-logs", async (req, res) => {
-  try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
-    const logs = await chatService.getTypingLogs(req.params.roomId, req.userId);
-    return sendSuccess(res, logs);
-  } catch (error) {
-    return handleError(error, res);
-  }
-});
-
-router.delete("/rooms/:roomId/typing-logs", async (req, res) => {
-  try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
-    const roomId = req.params.roomId;
-    const result = await chatService.clearTypingLogs(roomId, req.userId);
-    await clearRoomTypingState(roomId);
-    chatEvents.typingCleared(roomId);
-    return sendSuccess(res, result, "Đã xoá lịch sử đang nhập.");
   } catch (error) {
     return handleError(error, res);
   }

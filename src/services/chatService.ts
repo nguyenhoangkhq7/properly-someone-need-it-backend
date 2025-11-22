@@ -1,13 +1,11 @@
 import { Types } from "mongoose";
 import { ChatRoom, Message } from "../models/index.js";
-import type { IChatRoom, ITypingLog } from "../models/ChatRoom.js";
+import type { IChatRoom } from "../models/ChatRoom.js";
 import type { IMessage } from "../models/Message.js";
 import type { IUser } from "../models/User.js";
 import type { IItem } from "../models/Item.js";
 
 const { ObjectId } = Types;
-
-const TYPING_LOG_LIMIT = 20;
 
 export class ChatServiceError extends Error {
   statusCode: number;
@@ -107,34 +105,6 @@ const buildMessageResponse = (message: IMessage) => ({
   isRead: message.isRead,
 });
 
-const normalizeTypingLogs = (logs: ITypingLog[]) => {
-  const history = logs.slice(-TYPING_LOG_LIMIT);
-  const currentMap = new Map<string, ITypingLog>();
-
-  for (const log of history) {
-    const key = log.userId.toString();
-    if (log.action === "START") {
-      currentMap.set(key, log);
-    } else {
-      currentMap.delete(key);
-    }
-  }
-
-  const current = Array.from(currentMap.values()).map((log) => ({
-    userId: log.userId.toString(),
-    since: log.timestamp,
-  }));
-
-  return {
-    history: history.map((log) => ({
-      userId: log.userId.toString(),
-      action: log.action,
-      timestamp: log.timestamp,
-    })),
-    current,
-  };
-};
-
 export const chatService = {
   async listRooms(userId: string) {
     const userObjectId = toObjectId(userId);
@@ -226,44 +196,6 @@ export const chatService = {
     return { roomId, unreadKey: receiverKey };
   },
 
-  async getTypingLogs(roomId: string, userId: string) {
-    const { room } = await ensureRoomAccess(roomId, userId);
-    const normalized = normalizeTypingLogs(room.typingLogs ?? []);
-    return normalized;
-  },
-
-  async appendTypingLog(roomId: string, userId: string, action: "START" | "STOP") {
-    await ensureRoomAccess(roomId, userId);
-
-    const updateResult = await ChatRoom.findByIdAndUpdate(
-      roomId,
-      {
-        $push: {
-          typingLogs: {
-            $each: [{ userId: toObjectId(userId), action, timestamp: new Date() }],
-            $slice: -TYPING_LOG_LIMIT,
-          },
-        },
-      },
-      { new: true }
-    ).exec();
-
-    if (!updateResult) {
-      throw new ChatServiceError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng chat.");
-    }
-
-    return normalizeTypingLogs(updateResult.typingLogs ?? []);
-  },
-
-  async clearTypingLogs(roomId: string, userId: string) {
-    const { room } = await ensureRoomAccess(roomId, userId);
-
-    room.typingLogs = [];
-    await room.save();
-
-    return { roomId };
-  },
-
   async getRoomSnapshot(roomId: string) {
     const room = await ChatRoom.findById(roomId).lean<IChatRoom>();
     if (!room) {
@@ -282,6 +214,7 @@ export const chatService = {
       },
     };
   },
+  async assertRoomAccess(roomId: string, userId: string) {
+    await ensureRoomAccess(roomId, userId);
+  },
 };
-
-export const typingLogLimit = TYPING_LOG_LIMIT;
