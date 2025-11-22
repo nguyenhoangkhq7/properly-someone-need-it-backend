@@ -5,3 +5,5 @@ export { Order } from "./Order.js";
 export { ChatRoom } from "./ChatRoom.js";
 export { Message } from "./Message.js";
 export { Review } from "./Review.js";
+export { SearchHistory } from "./SearchHistory.js";
+export { ViewedItem } from "./ViewedItem.js";

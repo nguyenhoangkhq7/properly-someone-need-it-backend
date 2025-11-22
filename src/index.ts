@@ -3,6 +3,10 @@ import { connectDB } from "./config/db";
 import { Item } from "./models/Item";
 import orderRoutes from "./routes/orderRoutes";
 
+import itemRoutes from "./routes/itemRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
+import { requestLogger } from "./middlewares/logger.js";
+
 const app = express();
 const PORT = 3000;
 
@@ -14,7 +18,12 @@ app.use(express.json());
 // Routes cho orders
 app.use("/api/orders", orderRoutes);
 
+app.use(requestLogger);
 // Route test
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello TypeScript + Express!");
 });
@@ -73,6 +82,8 @@ app.post("/api/items", async (req: Request, res: Response) => {
   }
 });
 
+app.use("/items", itemRoutes);
+app.use("/search", searchRoutes);
 // Lắng nghe cổng
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
