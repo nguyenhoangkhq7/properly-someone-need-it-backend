@@ -12,6 +12,14 @@ const toBoolean = (value: string | undefined, fallback: boolean): boolean => {
   return value.toLowerCase() === "true";
 };
 
+const toStringArray = (value: string | undefined, fallback: string[]): string[] => {
+  if (!value) return fallback;
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
 export const env = {
   PORT: toNumber(process.env.PORT, 3000),
   MONGO_URI: process.env.MONGO_URI ?? "mongodb://localhost:27017/psni",
@@ -20,6 +28,8 @@ export const env = {
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET ?? "dev_refresh_secret",
   ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
   REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
+  ALLOWED_ORIGINS: toStringArray(process.env.ALLOWED_ORIGINS, ["*"]),
+  SOCKET_ALLOWED_ORIGINS: toStringArray(process.env.SOCKET_ALLOWED_ORIGINS, ["*"]),
 
   OTP_TTL_MINUTES: toNumber(process.env.OTP_TTL_MINUTES, 5),
   OTP_MAX_ATTEMPTS: toNumber(process.env.OTP_MAX_ATTEMPTS, 3),

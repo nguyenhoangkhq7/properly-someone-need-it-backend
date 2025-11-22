@@ -1,6 +1,12 @@
 import { Schema, model, Document } from "mongoose";
 import type { ObjectId } from "../types/index.js";
 
+export interface ITypingLog {
+  userId: ObjectId;
+  action: "START" | "STOP";
+  timestamp: Date;
+}
+
 export interface IChatRoom extends Document {
   _id: ObjectId;
   buyerId: ObjectId;
@@ -10,6 +16,7 @@ export interface IChatRoom extends Document {
   status: "ACTIVE" | "ARCHIVED";
   lastMessage?: string;
   lastMessageAt: Date;
+  typingLogs: ITypingLog[];
 }
 
 const chatRoomSchema = new Schema<IChatRoom>(
@@ -24,6 +31,14 @@ const chatRoomSchema = new Schema<IChatRoom>(
     status: { type: String, enum: ["ACTIVE", "ARCHIVED"], default: "ACTIVE" },
     lastMessage: String,
     lastMessageAt: { type: Date, default: Date.now },
+    typingLogs: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        action: { type: String, enum: ["START", "STOP"], required: true },
+        timestamp: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
   },
   { timestamps: true }
 );
