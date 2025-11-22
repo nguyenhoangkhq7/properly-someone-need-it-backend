@@ -1,38 +1,22 @@
-{
+﻿{
   "compilerOptions": {
     "removeComments": true,
     "noEmitOnError": true,
-
     "rootDir": "./src",
     "outDir": "./dist",
-
-    // ĐỔI 2 DÒNG NÀY THÀNH COMMONJS
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-
-    "target": "es2022",
-    "lib": ["es2022"],
-
+    "target": "ES2022",
+    "lib": ["ES2022"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-
     "strict": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": false,
     "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true
-  }
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
