@@ -1,9 +1,9 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import type { Request, Response } from "express";
 import mongoose, { isValidObjectId } from "mongoose";
-import { Review } from "../models/Review.js";
-import { sendError, sendSuccess } from "../utils/response.js";
-import requireAuth from "../middleware/requireAuth.js";
+import { Review } from "../models/Review";
+import { sendError, sendSuccess } from "../utils/response";
+import requireAuth from "../middleware/requireAuth";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.get("/:sellerId", async (req: Request, res: Response) => {
   try {
     const { sellerId } = req.params;
     if (!sellerId || !isValidObjectId(sellerId)) {
-      return sendError(res, 400, "SellerId không hợp lệ", "SELLER_INVALID");
+      return sendError(res, 400, "SellerId khÃ´ng há»£p lá»‡", "SELLER_INVALID");
     }
 
     const reviews = await Review.find({ sellerId })
@@ -33,10 +33,10 @@ router.get("/:sellerId", async (req: Request, res: Response) => {
 
     const stats = buildStats(reviews.map((review) => review.rating));
 
-    return sendSuccess(res, { reviews, stats }, "Lấy danh sách đánh giá thành công");
+    return sendSuccess(res, { reviews, stats }, "Láº¥y danh sÃ¡ch Ä‘Ã¡nh giÃ¡ thÃ nh cÃ´ng");
   } catch (error) {
     console.error("GET /reviews/:sellerId error", error);
-    return sendError(res, 500, "Không thể lấy danh sách đánh giá", "REVIEW_FETCH_FAILED");
+    return sendError(res, 500, "KhÃ´ng thá»ƒ láº¥y danh sÃ¡ch Ä‘Ã¡nh giÃ¡", "REVIEW_FETCH_FAILED");
   }
 });
 
@@ -44,17 +44,17 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const { sellerId, rating, comment, orderId, itemId } = req.body ?? {};
     if (!sellerId || !isValidObjectId(sellerId)) {
-      return sendError(res, 400, "SellerId không hợp lệ", "SELLER_INVALID");
+      return sendError(res, 400, "SellerId khÃ´ng há»£p lá»‡", "SELLER_INVALID");
     }
 
     const ratingNumber = Number(rating);
     if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
-      return sendError(res, 400, "Rating phải nằm trong khoảng 1-5", "RATING_INVALID");
+      return sendError(res, 400, "Rating pháº£i náº±m trong khoáº£ng 1-5", "RATING_INVALID");
     }
 
     const reviewerId = req.userId;
     if (!reviewerId) {
-      return sendError(res, 401, "Bạn cần đăng nhập để đánh giá", "AUTH_REQUIRED");
+      return sendError(res, 401, "Báº¡n cáº§n Ä‘Äƒng nháº­p Ä‘á»ƒ Ä‘Ã¡nh giÃ¡", "AUTH_REQUIRED");
     }
 
     const review = await Review.create({
@@ -74,11 +74,12 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
     const populated = await review.populate("reviewerId", "fullName avatar address");
 
-    return sendSuccess(res, populated, "Đánh giá đã được ghi nhận");
+    return sendSuccess(res, populated, "ÄÃ¡nh giÃ¡ Ä‘Ã£ Ä‘Æ°á»£c ghi nháº­n");
   } catch (error) {
     console.error("POST /reviews error", error);
-    return sendError(res, 500, "Không thể lưu đánh giá", "REVIEW_CREATE_FAILED");
+    return sendError(res, 500, "KhÃ´ng thá»ƒ lÆ°u Ä‘Ã¡nh giÃ¡", "REVIEW_CREATE_FAILED");
   }
 });
 
 export default router;
+

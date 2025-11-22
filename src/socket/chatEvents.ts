@@ -1,8 +1,6 @@
-import type { Server } from "socket.io";
+﻿let chatServer: any | null = null;
 
-let chatServer: Server | null = null;
-
-export const registerChatServer = (server: Server) => {
+export const registerChatServer = (server: any) => {
   chatServer = server;
 };
 
@@ -24,3 +22,5 @@ export const chatEvents = {
     chatServer?.to(roomId).emit("typing:update", payload);
   },
 };
+
+

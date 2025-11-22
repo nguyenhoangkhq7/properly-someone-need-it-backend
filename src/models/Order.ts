@@ -1,6 +1,6 @@
-// src/models/Order.ts
+﻿// src/models/Order.ts
 import { Schema, model, Document } from "mongoose";
-import type { ObjectId } from "../types/index.js";
+import type { ObjectId } from "../types/index";
 
 export interface IMeetupLocation {
   address?: string;
@@ -84,3 +84,4 @@ orderSchema.index({ sellerId: 1 });
 orderSchema.index({ status: 1 });
 
 export const Order = model<IOrder>("Order", orderSchema);
+

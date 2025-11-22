@@ -1,9 +1,9 @@
-import { Types } from "mongoose";
-import { ChatRoom, Message } from "../models/index.js";
-import type { IChatRoom } from "../models/ChatRoom.js";
-import type { IMessage } from "../models/Message.js";
-import type { IUser } from "../models/User.js";
-import type { IItem } from "../models/Item.js";
+﻿import { Types } from "mongoose";
+import { ChatRoom, Message } from "../models/index";
+import type { IChatRoom } from "../models/ChatRoom";
+import type { IMessage } from "../models/Message";
+import type { IUser } from "../models/User";
+import type { IItem } from "../models/Item";
 
 const { ObjectId } = Types;
 
@@ -20,7 +20,7 @@ export class ChatServiceError extends Error {
 
 const toObjectId = (value: string): Types.ObjectId => {
   if (!ObjectId.isValid(value)) {
-    throw new ChatServiceError(400, "INVALID_ID", "ID không hợp lệ.");
+    throw new ChatServiceError(400, "INVALID_ID", "ID khÃ´ng há»£p lá»‡.");
   }
   return new ObjectId(value);
 };
@@ -41,7 +41,7 @@ const ensureRoomAccess = async (roomId: string, userId: string) => {
     .exec();
 
   if (!room) {
-    throw new ChatServiceError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng chat.");
+    throw new ChatServiceError(404, "ROOM_NOT_FOUND", "KhÃ´ng tÃ¬m tháº¥y phÃ²ng chat.");
   }
 
   const userObjectId = toObjectId(userId);
@@ -52,7 +52,7 @@ const ensureRoomAccess = async (roomId: string, userId: string) => {
   const isSeller = sellerObjectId.equals(userObjectId);
 
   if (!isBuyer && !isSeller) {
-    throw new ChatServiceError(403, "ROOM_FORBIDDEN", "Bạn không có quyền truy cập phòng này.");
+    throw new ChatServiceError(403, "ROOM_FORBIDDEN", "Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p phÃ²ng nÃ y.");
   }
 
   return { room, isBuyer, userObjectId };
@@ -131,7 +131,7 @@ export const chatService = {
     if (options?.before) {
       const beforeDate = new Date(options.before);
       if (Number.isNaN(beforeDate.getTime())) {
-        throw new ChatServiceError(400, "INVALID_CURSOR", "Thời gian không hợp lệ.");
+        throw new ChatServiceError(400, "INVALID_CURSOR", "Thá»i gian khÃ´ng há»£p lá»‡.");
       }
       filter.sentAt = { $lt: beforeDate };
     }
@@ -146,7 +146,7 @@ export const chatService = {
 
   async createTextMessage(roomId: string, userId: string, content: string) {
     if (!content || !content.trim()) {
-      throw new ChatServiceError(400, "EMPTY_MESSAGE", "Nội dung tin nhắn không được để trống.");
+      throw new ChatServiceError(400, "EMPTY_MESSAGE", "Ná»™i dung tin nháº¯n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
     }
 
     const { room, userObjectId, isBuyer } = await ensureRoomAccess(roomId, userId);
@@ -199,7 +199,7 @@ export const chatService = {
   async getRoomSnapshot(roomId: string) {
     const room = await ChatRoom.findById(roomId).lean<IChatRoom>();
     if (!room) {
-      throw new ChatServiceError(404, "ROOM_NOT_FOUND", "Không tìm thấy phòng chat.");
+      throw new ChatServiceError(404, "ROOM_NOT_FOUND", "KhÃ´ng tÃ¬m tháº¥y phÃ²ng chat.");
     }
 
     return {
@@ -218,3 +218,4 @@ export const chatService = {
     await ensureRoomAccess(roomId, userId);
   },
 };
+

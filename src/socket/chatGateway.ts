@@ -1,9 +1,10 @@
-import type { Server as HTTPServer } from "http";
-import { Server } from "socket.io";
-import { env } from "../config/env.js";
-import { verifyAccessToken } from "../utils/jwtHelper.js";
-import { chatService, ChatServiceError } from "../services/chatService.js";
-import { chatEvents, registerChatServer } from "./chatEvents.js";
+﻿import type { Server as HTTPServer } from "http";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { Server }: { Server: any } = require("socket.io");
+import { env } from "../config/env";
+import { verifyAccessToken } from "../utils/jwtHelper";
+import { chatService, ChatServiceError } from "../services/chatService";
+import { chatEvents, registerChatServer } from "./chatEvents";
 
 interface AckResponse<T = unknown> {
   success: boolean;
@@ -40,7 +41,7 @@ const handleSocketError = (error: unknown, ack?: Ack) => {
   console.error("Socket error", error);
   return respond(ack, {
     success: false,
-    error: "Đã xảy ra lỗi không mong muốn.",
+    error: "ÄÃ£ xáº£y ra lá»—i khÃ´ng mong muá»‘n.",
     errorCode: "CHAT_SOCKET_ERROR",
   });
 };
@@ -69,16 +70,19 @@ const updateTypingState = (roomId: string, userId: string, isTyping: boolean) =>
 };
 
 export const createChatGateway = (server: HTTPServer) => {
+  const socketOrigin: string | string[] =
+    env.SOCKET_ALLOWED_ORIGINS.includes("*") ? "*" : env.SOCKET_ALLOWED_ORIGINS;
+
   const io = new Server(server, {
     cors: {
-      origin: env.SOCKET_ALLOWED_ORIGINS,
+      origin: socketOrigin,
       credentials: true,
     },
   });
 
   registerChatServer(io);
 
-  io.use((socket, next) => {
+  io.use((socket: any, next: any) => {
     const token = socket.handshake.auth?.token;
     if (!token) {
       return next(new Error("AUTH_REQUIRED"));
@@ -94,7 +98,7 @@ export const createChatGateway = (server: HTTPServer) => {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", (socket: any) => {
     const userId = socket.data.userId as string;
     const joinedRooms = new Set<string>();
 
@@ -143,7 +147,7 @@ export const createChatGateway = (server: HTTPServer) => {
         if (!joinedRooms.has(roomId)) {
           respond(ack, {
             success: false,
-            error: "Bạn chưa tham gia phòng này.",
+            error: "Báº¡n chÆ°a tham gia phÃ²ng nÃ y.",
             errorCode: "ROOM_NOT_JOINED",
           });
           return;
@@ -171,3 +175,6 @@ export const createChatGateway = (server: HTTPServer) => {
 
   return io;
 };
+
+
+

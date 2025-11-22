@@ -1,5 +1,5 @@
-import axios from "axios";
-import { env } from "../config/env.js";
+﻿import axios from "axios";
+import { env } from "../config/env";
 
 const MAX_RETRY = 3;
 
@@ -36,11 +36,12 @@ export const getEmbedding = async (text: string): Promise<number[]> => {
         code !== "ECONNABORTED" &&
         code !== "ETIMEDOUT"
       ) {
-        break; // lỗi khác -> không retry
+        break; // lá»—i khÃ¡c -> khÃ´ng retry
       }
-      if (attempt < MAX_RETRY) await sleep(500 * attempt); // backoff nhẹ
+      if (attempt < MAX_RETRY) await sleep(500 * attempt); // backoff nháº¹
     }
   }
   console.error("Error generating embedding:", lastErr);
   throw new Error("Failed to generate embedding");
 };
+

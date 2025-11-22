@@ -1,4 +1,4 @@
-import * as dotenv from "dotenv";
+﻿import * as dotenv from "dotenv";
 dotenv.config();
 
 const toNumber = (value: string | undefined, fallback: number): number => {
@@ -43,7 +43,7 @@ export const env = {
   SMTP_SECURE: toBoolean(process.env.SMTP_SECURE, false),
   SMTP_USER: process.env.SMTP_USER ?? "hoanpv076@gmail.com",
   SMTP_PASS: process.env.SMTP_PASS ?? "thfracfvugmxwgos",
-  // OpenRouter (ưu tiên)
+  // OpenRouter (Æ°u tiÃªn)
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
   OPENROUTER_BASE_URL:
     process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1/embeddings",
@@ -58,3 +58,4 @@ if (!env.MONGO_URI) {
 if (!env.OPENROUTER_API_KEY) {
   console.warn("Warning: Missing OPENROUTER_API_KEY - embeddings will fail.");
 }
+

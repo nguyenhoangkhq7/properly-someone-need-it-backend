@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import {
   getAllItems,
   getItemById,
@@ -6,8 +6,8 @@ import {
   getNearbyItems,
   getRecommendedItems,
   getItemsByCategory,
-} from "../controllers/itemController.js";
-import { getForYou } from "../controllers/forYouController.js";
+} from "../controllers/itemController";
+import { getForYou } from "../controllers/forYouController";
 
 const router = Router();
 
@@ -21,3 +21,4 @@ router.get("/for-you/:userId", getForYou);
 router.get("/:id", getItemById);
 
 export default router;
+

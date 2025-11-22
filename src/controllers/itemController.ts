@@ -1,7 +1,7 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
 import { Types } from "mongoose";
-import { Item } from "../models/Item.js";
-import { ViewedItem } from "../models/ViewedItem.js";
+import { Item } from "../models/Item";
+import { ViewedItem } from "../models/ViewedItem";
 
 // =======================
 // 1) GET ALL ITEMS
@@ -10,7 +10,7 @@ export const getAllItems = async (req: Request, res: Response) => {
   try {
     const items = await Item.find({ status: "ACTIVE" }).sort({ createdAt: -1 });
     console.log(
-      "🔥 ITEMS FOUND:",
+      "ðŸ”¥ ITEMS FOUND:",
       (await Item.find({ status: "ACTIVE" })).length
     );
 
@@ -21,7 +21,7 @@ export const getAllItems = async (req: Request, res: Response) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: "Lỗi server",
+      message: "Lá»—i server",
     });
   }
 };
@@ -36,7 +36,7 @@ export const getItemById = async (req: Request, res: Response) => {
     if (!item) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy sản phẩm",
+        message: "KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m",
       });
     }
 
@@ -56,7 +56,7 @@ export const getItemById = async (req: Request, res: Response) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: "Lỗi server",
+      message: "Lá»—i server",
     });
   }
 };
@@ -77,7 +77,7 @@ export const getNewItems = async (req: Request, res: Response) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: "Lỗi server",
+      message: "Lá»—i server",
     });
   }
 };
@@ -93,7 +93,7 @@ export const getNearbyItems = async (req: Request, res: Response) => {
     if (!lat || !lng) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu tham số lat hoặc lng",
+        message: "Thiáº¿u tham sá»‘ lat hoáº·c lng",
       });
     }
 
@@ -119,7 +119,7 @@ export const getNearbyItems = async (req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message: "Lỗi server khi tìm Nearby Items",
+      message: "Lá»—i server khi tÃ¬m Nearby Items",
     });
   }
 };
@@ -127,11 +127,11 @@ export const getNearbyItems = async (req: Request, res: Response) => {
 // =======================
 // 5) GET RECOMMENDED ITEMS
 // =======================
-// Dựa trên lịch sử tìm kiếm / danh mục đã xem / wishlist / tạm thời đơn giản
+// Dá»±a trÃªn lá»‹ch sá»­ tÃ¬m kiáº¿m / danh má»¥c Ä‘Ã£ xem / wishlist / táº¡m thá»i Ä‘Æ¡n giáº£n
 export const getRecommendedItems = async (req: Request, res: Response) => {
   try {
-    // 🔥 Sau này bạn thêm logic ML, AI, thống kê hành vi ở đây
-    // Tạm thời: gợi ý sản phẩm mới nhất + cùng danh mục mà user hay xem
+    // ðŸ”¥ Sau nÃ y báº¡n thÃªm logic ML, AI, thá»‘ng kÃª hÃ nh vi á»Ÿ Ä‘Ã¢y
+    // Táº¡m thá»i: gá»£i Ã½ sáº£n pháº©m má»›i nháº¥t + cÃ¹ng danh má»¥c mÃ  user hay xem
     const items = await Item.find({ status: "ACTIVE" })
       .sort({ favoritesCount: -1, createdAt: -1 })
       .limit(20);
@@ -145,7 +145,7 @@ export const getRecommendedItems = async (req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy recommended items",
+      message: "Lá»—i khi láº¥y recommended items",
     });
   }
 };
@@ -159,7 +159,7 @@ export const getItemsByCategory = async (req: Request, res: Response) => {
     if (!category) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu category",
+        message: "Thiáº¿u category",
       });
     }
 
@@ -175,7 +175,8 @@ export const getItemsByCategory = async (req: Request, res: Response) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: "Lỗi server khi lấy items theo category",
+      message: "Lá»—i server khi láº¥y items theo category",
     });
   }
 };
+

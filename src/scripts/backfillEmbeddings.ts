@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import { connectDB } from "../config/db/index.js";
-import { Item } from "../models/Item.js";
-import { getEmbedding } from "../services/embeddingService.js";
+﻿import mongoose from "mongoose";
+import { connectDB } from "../config/db/index";
+import { Item } from "../models/Item";
+import { getEmbedding } from "../services/embeddingService";
 
 const run = async () => {
   await connectDB();
@@ -31,7 +31,7 @@ const run = async () => {
     } catch (err) {
       failed += 1;
       console.error(`Skip item ${item._id} due to error:`, err?.toString?.() ?? err);
-      // tiếp tục item tiếp theo thay vì dừng toàn bộ
+      // tiáº¿p tá»¥c item tiáº¿p theo thay vÃ¬ dá»«ng toÃ n bá»™
     }
   }
 
@@ -45,3 +45,4 @@ run()
   .finally(async () => {
     await mongoose.disconnect();
   });
+

@@ -1,12 +1,21 @@
-import { Router } from "express";
-import requireAuth from "../middleware/requireAuth.js";
-import { sendError, sendSuccess } from "../utils/response.js";
-import { chatService, ChatServiceError } from "../services/chatService.js";
-import { chatEvents } from "../socket/chatEvents.js";
+﻿import { Router, type Request } from "express";
+import requireAuth from "../middleware/requireAuth";
+import { sendError, sendSuccess } from "../utils/response";
+import { chatService, ChatServiceError } from "../services/chatService";
+import { chatEvents } from "../socket/chatEvents";
 
 const router = Router();
 
 router.use(requireAuth);
+
+router.use((req, res, next) => {
+  if (!req.userId) {
+    return sendError(res, 401, "Báº¡n cáº§n Ä‘Äƒng nháº­p.", "AUTH_REQUIRED");
+  }
+  return next();
+});
+
+const getUserId = (req: Request) => req.userId as string;
 
 const handleError = (error: unknown, res: Parameters<typeof sendError>[0]) => {
   if (error instanceof ChatServiceError) {
@@ -14,16 +23,13 @@ const handleError = (error: unknown, res: Parameters<typeof sendError>[0]) => {
   }
 
   console.error("Chat route error", error);
-  return sendError(res, 500, "Đã xảy ra lỗi không mong muốn.", "CHAT_SERVER_ERROR");
+  return sendError(res, 500, "ÄÃ£ xáº£y ra lá»—i khÃ´ng mong muá»‘n.", "CHAT_SERVER_ERROR");
 };
 
 router.get("/rooms", async (req, res) => {
   try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
-    const rooms = await chatService.listRooms(req.userId);
+    const userId = getUserId(req);
+    const rooms = await chatService.listRooms(userId);
     return sendSuccess(res, rooms);
   } catch (error) {
     return handleError(error, res);
@@ -32,10 +38,7 @@ router.get("/rooms", async (req, res) => {
 
 router.get("/rooms/:roomId/messages", async (req, res) => {
   try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
+    const userId = getUserId(req);
     const { before, limit } = req.query;
     const fetchOptions: { before?: string; limit?: number } = {};
     if (typeof before === "string") {
@@ -45,7 +48,7 @@ router.get("/rooms/:roomId/messages", async (req, res) => {
       fetchOptions.limit = Number(limit);
     }
 
-    const messages = await chatService.fetchMessages(req.params.roomId, req.userId, fetchOptions);
+    const messages = await chatService.fetchMessages(req.params.roomId, userId, fetchOptions);
 
     return sendSuccess(res, messages);
   } catch (error) {
@@ -55,19 +58,16 @@ router.get("/rooms/:roomId/messages", async (req, res) => {
 
 router.post("/rooms/:roomId/messages", async (req, res) => {
   try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
+    const userId = getUserId(req);
     const { content } = req.body as { content?: string };
     const roomId = req.params.roomId;
-    const message = await chatService.createTextMessage(roomId, req.userId, content ?? "");
+    const message = await chatService.createTextMessage(roomId, userId, content ?? "");
 
     const snapshot = await chatService.getRoomSnapshot(roomId);
     chatEvents.messageCreated(roomId, message);
     chatEvents.roomUpdated(snapshot);
 
-    return sendSuccess(res, message, "Đã gửi tin nhắn.");
+    return sendSuccess(res, message, "ÄÃ£ gá»­i tin nháº¯n.");
   } catch (error) {
     return handleError(error, res);
   }
@@ -75,18 +75,16 @@ router.post("/rooms/:roomId/messages", async (req, res) => {
 
 router.patch("/rooms/:roomId/read", async (req, res) => {
   try {
-    if (!req.userId) {
-      return sendError(res, 401, "Bạn cần đăng nhập.", "AUTH_REQUIRED");
-    }
-
+    const userId = getUserId(req);
     const roomId = req.params.roomId;
-    const result = await chatService.markAsRead(roomId, req.userId);
+    const result = await chatService.markAsRead(roomId, userId);
     const snapshot = await chatService.getRoomSnapshot(roomId);
     chatEvents.roomUpdated(snapshot);
-    return sendSuccess(res, result, "Đã đánh dấu đã đọc.");
+    return sendSuccess(res, result, "ÄÃ£ Ä‘Ã¡nh dáº¥u Ä‘Ã£ Ä‘á»c.");
   } catch (error) {
     return handleError(error, res);
   }
 });
 
 export default router;
+

@@ -1,5 +1,5 @@
-import nodemailer from "nodemailer";
-import { env } from "../config/env.js";
+﻿import nodemailer from "nodemailer";
+import { env } from "../config/env";
 
 interface SendEmailOptions {
   to: string;
@@ -22,7 +22,7 @@ const createTransporter = () =>
     },
   });
 
-let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporter: any | null = null;
 
 const getTransporter = () => {
   if (!hasSmtpConfig()) {
@@ -51,10 +51,12 @@ export const sendEmail = async ({ to, subject, text, html }: SendEmailOptions) =
 };
 
 export const sendOtpEmail = async (to: string, otpCode: string, purpose: string) => {
-  const subject = `Mã OTP ${purpose === "register" ? "đăng ký" : "đăng nhập"}`;
+  const subject = `MÃ£ OTP ${purpose === "register" ? "Ä‘Äƒng kÃ½" : "Ä‘Äƒng nháº­p"}`;
   const minutes = env.OTP_TTL_MINUTES;
-  const text = `Mã OTP của bạn là ${otpCode}. Mã sẽ hết hạn sau ${minutes} phút.`;
-  const html = `<p>Mã OTP của bạn là <strong>${otpCode}</strong>.</p><p>Mã sẽ hết hạn sau ${minutes} phút.</p>`;
+  const text = `MÃ£ OTP cá»§a báº¡n lÃ  ${otpCode}. MÃ£ sáº½ háº¿t háº¡n sau ${minutes} phÃºt.`;
+  const html = `<p>MÃ£ OTP cá»§a báº¡n lÃ  <strong>${otpCode}</strong>.</p><p>MÃ£ sáº½ háº¿t háº¡n sau ${minutes} phÃºt.</p>`;
 
   await sendEmail({ to, subject, text, html });
 };
+
+

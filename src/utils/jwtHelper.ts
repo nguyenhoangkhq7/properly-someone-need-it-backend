@@ -1,7 +1,6 @@
-import jwt from "jsonwebtoken";
-import type { Secret, SignOptions } from "jsonwebtoken";
-import { env } from "../config/env.js";
-import type { UserRole } from "../models/User.js";
+﻿import jwt from "jsonwebtoken";
+import { env } from "../config/env";
+import type { UserRole } from "../models/User";
 
 export interface JwtPayload {
   userId: string;
@@ -10,13 +9,12 @@ export interface JwtPayload {
   exp: number;
 }
 
-const ACCESS_SECRET: Secret = env.ACCESS_TOKEN_SECRET as Secret;
-const REFRESH_SECRET: Secret = env.REFRESH_TOKEN_SECRET as Secret;
+const ACCESS_SECRET = env.ACCESS_TOKEN_SECRET as string;
+const REFRESH_SECRET = env.REFRESH_TOKEN_SECRET as string;
 
 type JwtExpires = string | number;
 
-const buildOptions = (expiresIn: JwtExpires): SignOptions =>
-  ({ expiresIn } as SignOptions);
+const buildOptions = (expiresIn: JwtExpires) => ({ expiresIn });
 
 export const signAccessToken = (userId: string, role: UserRole): string =>
   jwt.sign(
@@ -39,3 +37,5 @@ export const verifyRefreshToken = (token: string): JwtPayload => {
 export const verifyAccessToken = (token: string): JwtPayload => {
   return jwt.verify(token, ACCESS_SECRET) as JwtPayload;
 };
+
+

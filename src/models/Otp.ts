@@ -1,5 +1,5 @@
-import { Schema, model, Document } from "mongoose";
-import { env } from "../config/env.js";
+﻿import { Schema, model, Document } from "mongoose";
+import { env } from "../config/env";
 
 export type OtpPurpose = "login" | "register";
 
@@ -36,3 +36,4 @@ const otpSchema = new Schema<IEmailOtp>(
 otpSchema.index({ email: 1, purpose: 1, createdAt: -1 });
 
 export const EmailOtp = model<IEmailOtp>("EmailOtp", otpSchema);
+

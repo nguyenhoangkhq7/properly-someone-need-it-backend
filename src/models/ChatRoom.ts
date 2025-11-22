@@ -1,5 +1,5 @@
-import { Schema, model, Document } from "mongoose";
-import type { ObjectId } from "../types/index.js";
+﻿import { Schema, model, Document } from "mongoose";
+import type { ObjectId } from "../types/index";
 
 export interface IChatRoom extends Document {
   _id: ObjectId;
@@ -32,3 +32,4 @@ chatRoomSchema.index({ buyerId: 1, sellerId: 1, itemId: 1 }, { unique: true });
 chatRoomSchema.index({ lastMessageAt: -1 });
 
 export const ChatRoom = model<IChatRoom>("ChatRoom", chatRoomSchema);
+

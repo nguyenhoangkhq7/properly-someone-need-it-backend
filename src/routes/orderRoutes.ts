@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import type { Request, Response } from "express";
 import { Order } from "../models/Order";
 import { Item } from "../models/Item";
@@ -6,7 +6,7 @@ import { User } from "../models/User";
 
 const router = express.Router();
 
-// Lấy danh sách đơn hàng theo buyer (người mua)
+// Láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng theo buyer (ngÆ°á»i mua)
 router.get("/buyer/:buyerId", async (req: Request, res: Response) => {
   try {
     const { buyerId } = req.params as { buyerId: string };
@@ -45,7 +45,7 @@ router.get("/buyer/:buyerId", async (req: Request, res: Response) => {
   }
 });
 
-// Lấy danh sách đơn hàng theo seller (người bán)
+// Láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng theo seller (ngÆ°á»i bÃ¡n)
 router.get("/seller/:sellerId", async (req: Request, res: Response) => {
   try {
     const { sellerId } = req.params as { sellerId: string };
@@ -84,7 +84,7 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
   }
 });
 
-// Lấy chi tiết đơn hàng theo id (kèm thông tin item cơ bản)
+// Láº¥y chi tiáº¿t Ä‘Æ¡n hÃ ng theo id (kÃ¨m thÃ´ng tin item cÆ¡ báº£n)
 router.get("/:orderId", async (req: Request, res: Response) => {
   try {
     const { orderId } = req.params as { orderId: string };
@@ -107,7 +107,7 @@ router.get("/:orderId", async (req: Request, res: Response) => {
   }
 });
 
-// Tạo đơn hàng mới (buyer tạo đơn mua)
+// Táº¡o Ä‘Æ¡n hÃ ng má»›i (buyer táº¡o Ä‘Æ¡n mua)
 router.post("/", async (req: Request, res: Response) => {
   try {
     const { itemId } = req.body as { itemId?: string };
@@ -116,7 +116,7 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "ITEM_ID_REQUIRED" });
     }
 
-    // TODO: lấy buyerId từ auth, tạm thời fake
+    // TODO: láº¥y buyerId tá»« auth, táº¡m thá»i fake
     // TODO: Replace this with real authenticated user id when auth is implemented
     // const buyerId = "691fcad4a11a95c67d2e526c";
     const buyerId = "691fcad4a11a95c67d2e526c";
@@ -165,7 +165,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-// Cập nhật trạng thái đơn hàng
+// Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
 router.patch("/:orderId/status", async (req: Request, res: Response) => {
   try {
     const { orderId } = req.params as { orderId: string };
@@ -195,7 +195,7 @@ router.patch("/:orderId/status", async (req: Request, res: Response) => {
     order.status = status as any;
     await order.save();
 
-    // Nếu chuyển sang MEETUP_SCHEDULED thì hủy các đơn khác cùng itemId
+    // Náº¿u chuyá»ƒn sang MEETUP_SCHEDULED thÃ¬ há»§y cÃ¡c Ä‘Æ¡n khÃ¡c cÃ¹ng itemId
     if (status === "MEETUP_SCHEDULED") {
       await Order.updateMany(
         {
@@ -219,3 +219,4 @@ router.patch("/:orderId/status", async (req: Request, res: Response) => {
 });
 
 export default router;
+

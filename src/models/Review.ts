@@ -1,5 +1,5 @@
-import { Schema, model, Document } from "mongoose";
-import type { ObjectId } from "../types/index.js";
+﻿import { Schema, model, Document } from "mongoose";
+import type { ObjectId } from "../types/index";
 
 export interface IReview extends Document {
   _id: ObjectId;
@@ -34,3 +34,4 @@ const reviewSchema = new Schema<IReview>(
 reviewSchema.index({ sellerId: 1, createdAt: -1 });
 
 export const Review = model<IReview>("Review", reviewSchema);
+

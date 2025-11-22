@@ -1,6 +1,6 @@
-// src/models/User.ts
+﻿// src/models/User.ts
 import { Schema, model, Document } from "mongoose";
-import type { ObjectId } from "../types/index.js";
+import type { ObjectId } from "../types/index";
 
 export interface ILocation {
   type: "Point";
@@ -84,10 +84,9 @@ const userSchema = new Schema<IUser>(
 
 // Index quan trọng
 userSchema.index({ "address.location": "2dsphere" });
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
 userSchema.index({ trustScore: -1 });
 userSchema.index({ successfulTrades: -1 });
 userSchema.index({ rating: -1 });
 
 export const User = model<IUser>("User", userSchema);
+

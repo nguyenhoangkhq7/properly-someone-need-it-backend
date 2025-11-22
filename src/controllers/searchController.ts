@@ -1,8 +1,8 @@
 ﻿import type { Request, Response } from "express";
-import { Item, type IItem } from "../models/Item.js";
-import { SearchHistory } from "../models/SearchHistory.js";
+import { Item, type IItem } from "../models/Item";
+import { SearchHistory } from "../models/SearchHistory";
 import { Types } from "mongoose";
-import { getEmbedding } from "../services/embeddingService.js";
+import { getEmbedding } from "../services/embeddingService";
 
 type ItemCategory = IItem["category"];
 
@@ -262,3 +262,4 @@ export const semanticSearch = async (req: Request, res: Response) => {
     });
   }
 };
+

@@ -1,8 +1,8 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
 import { Types } from "mongoose";
-import { Item } from "../models/Item.js";
-import { ViewedItem } from "../models/ViewedItem.js";
-import { SearchHistory } from "../models/SearchHistory.js";
+import { Item } from "../models/Item";
+import { ViewedItem } from "../models/ViewedItem";
+import { SearchHistory } from "../models/SearchHistory";
 
 export const getForYou = async (req: Request, res: Response) => {
   try {
@@ -10,7 +10,7 @@ export const getForYou = async (req: Request, res: Response) => {
     if (!userIdParam || !Types.ObjectId.isValid(userIdParam)) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu hoặc sai userId",
+        message: "Thiáº¿u hoáº·c sai userId",
       });
     }
     const userId = new Types.ObjectId(userIdParam);
@@ -74,7 +74,8 @@ export const getForYou = async (req: Request, res: Response) => {
     console.error("ForYou error:", err);
     return res.status(500).json({
       success: false,
-      message: "Lỗi server khi lấy gợi ý cho bạn",
+      message: "Lá»—i server khi láº¥y gá»£i Ã½ cho báº¡n",
     });
   }
 };
+

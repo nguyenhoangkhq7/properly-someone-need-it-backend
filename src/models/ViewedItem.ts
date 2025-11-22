@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+﻿import { Schema, model, Document, Types } from "mongoose";
 
 export interface IViewedItem extends Document {
   userId: Types.ObjectId;
@@ -15,7 +15,8 @@ const viewedItemSchema = new Schema<IViewedItem>(
   { timestamps: false }
 );
 
-// Tự động xóa sau 7 ngày
+// Tá»± Ä‘á»™ng xÃ³a sau 7 ngÃ y
 viewedItemSchema.index({ viewedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 });
 
 export const ViewedItem = model<IViewedItem>("ViewedItem", viewedItemSchema);
+

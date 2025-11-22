@@ -1,6 +1,6 @@
-// src/models/Item.ts
+﻿// src/models/Item.ts
 import { Schema, model, Document } from "mongoose";
-import type { ObjectId } from "../types/index.js";
+import type { ObjectId } from "../types/index";
 
 export interface IItemLocation {
   type: "Point";
@@ -104,3 +104,4 @@ itemSchema.index({ createdAt: -1 });
 itemSchema.index({ sellerId: 1 });
 
 export const Item = model<IItem>("Item", itemSchema);
+

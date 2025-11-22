@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+﻿import type { Request, Response, NextFunction } from "express";
 
 export const requestLogger = (
   req: Request,
@@ -7,15 +7,16 @@ export const requestLogger = (
 ) => {
   const start = Date.now();
 
-  console.log(`➡️  [REQUEST] ${req.method} ${req.originalUrl}`);
+  console.log(`[REQUEST] ${req.method} ${req.originalUrl}`);
 
-  // Lắng nghe khi response gửi đi
+  // Log when the response finishes so we can include status and duration
   res.on("finish", () => {
     const duration = Date.now() - start;
     console.log(
-      `⬅️  [RESPONSE] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} - ${duration}ms`
+      `[RESPONSE] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} - ${duration}ms`
     );
   });
 
   next();
 };
+

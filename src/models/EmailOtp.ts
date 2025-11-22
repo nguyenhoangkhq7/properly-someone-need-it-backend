@@ -1,1 +1,2 @@
-export { EmailOtp, type IEmailOtp, type OtpPurpose } from "./Otp.js";
+﻿export { EmailOtp, type IEmailOtp, type OtpPurpose } from "./Otp";
+
