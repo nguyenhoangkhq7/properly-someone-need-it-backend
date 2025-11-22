@@ -1,25 +1,40 @@
-﻿{
+{
   "compilerOptions": {
     "removeComments": true,
     "noEmitOnError": true,
     "rootDir": "./src",
     "outDir": "./dist",
+
+    /* Environment Settings */
     "module": "NodeNext",
+    "target": "ESNext",
     "moduleResolution": "NodeNext",
-    "target": "ES2022",
-    "lib": ["ES2022"],
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    
+    /* Other Outputs */
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "strict": true,
+
+    /* Stricter Typechecking Options */
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Style Options */
     "noImplicitReturns": true,
     "noUnusedLocals": true,
+
+    /* Recommended Options */
+    "strict": true,
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
   },
-  "include": ["src/**/*", "src/scripts/**/*", "*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["src/**/*"]
 }

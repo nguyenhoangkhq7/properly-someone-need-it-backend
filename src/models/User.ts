@@ -7,11 +7,16 @@ export interface ILocation {
   coordinates: [number, number];
 }
 
+export type UserRole = "user" | "admin";
+
 export interface IUser extends Document {
   _id: ObjectId;
   fullName: string;
+  email: string;
   phone: string;
   avatar?: string;
+  role: UserRole;
+  refreshToken?: string | null;
 
   address: {
     city: string;
@@ -42,9 +47,12 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     phone: { type: String, required: true, unique: true, trim: true },
 
     avatar: String,
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    refreshToken: { type: String, default: null },
 
     address: {
       city: { type: String, required: true },
@@ -76,6 +84,8 @@ const userSchema = new Schema<IUser>(
 
 // Index quan trọng
 userSchema.index({ "address.location": "2dsphere" });
+userSchema.index({ email: 1 });
+userSchema.index({ phone: 1 });
 userSchema.index({ trustScore: -1 });
 userSchema.index({ successfulTrades: -1 });
 userSchema.index({ rating: -1 });

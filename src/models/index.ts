@@ -5,5 +5,7 @@ export { Order } from "./Order.js";
 export { ChatRoom } from "./ChatRoom.js";
 export { Message } from "./Message.js";
 export { Review } from "./Review.js";
+export { EmailOtp } from "./EmailOtp.js";
+export type { OtpPurpose } from "./EmailOtp.js";
 export { SearchHistory } from "./SearchHistory.js";
 export { ViewedItem } from "./ViewedItem.js";
