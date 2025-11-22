@@ -38,6 +38,7 @@ export interface IItem extends Document {
 
   views: number;
   favoritesCount: number;
+  embedding?: number[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -91,6 +92,7 @@ const itemSchema = new Schema<IItem>(
 
     views: { type: Number, default: 0 },
     favoritesCount: { type: Number, default: 0 },
+    embedding: { type: [Number], default: [] },
   },
   { timestamps: true }
 );
