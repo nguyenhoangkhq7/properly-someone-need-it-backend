@@ -48,7 +48,10 @@ export const semanticSearch = async (req: Request, res: Response) => {
     }
 
     if (!queryEmbedding || !queryEmbedding.length) {
-      console.error("Failed to generate embedding after retries:", lastEmbeddingError);
+      console.error(
+        "Failed to generate embedding after retries:",
+        lastEmbeddingError
+      );
       return res.status(502).json({
         success: false,
         message: "Failed to generate query embedding. Please try again.",
