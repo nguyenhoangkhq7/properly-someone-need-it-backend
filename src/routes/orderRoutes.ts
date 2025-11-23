@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { Order } from "../models/Order";
 import { Item } from "../models/Item";
 import { User } from "../models/User";
+import requireAuth from "../middleware/requireAuth";
 
 const router = express.Router();
 
@@ -108,7 +109,7 @@ router.get("/:orderId", async (req: Request, res: Response) => {
 });
 
 // Táº¡o Ä‘Æ¡n hÃ ng má»›i (buyer táº¡o Ä‘Æ¡n mua)
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const { itemId } = req.body as { itemId?: string };
 
@@ -116,10 +117,11 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "ITEM_ID_REQUIRED" });
     }
 
-    // TODO: láº¥y buyerId tá»« auth, táº¡m thá»i fake
-    // TODO: Replace this with real authenticated user id when auth is implemented
-    // const buyerId = "691fcad4a11a95c67d2e526c";
-    const buyerId = "691fcad4a11a95c67d2e526c";
+    // Lấy buyerId từ middleware xác thực
+    const buyerId = req.userId as string | undefined;
+    if (!buyerId) {
+      return res.status(401).json({ error: "AUTH_REQUIRED" });
+    }
     const item = await Item.findById(itemId).lean();
     if (!item) {
       return res.status(404).json({ error: "ITEM_NOT_FOUND" });
