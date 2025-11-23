@@ -6,76 +6,127 @@ import { SearchHistory } from "../models/SearchHistory";
 
 export const getForYou = async (req: Request, res: Response) => {
   try {
-    const userIdParam = (req.params.userId ?? req.query.userId ?? "").toString().trim();
+    // 1. Validation & Parsing userId
+    const userIdRaw = req.params.userId ?? req.query.userId;
+    const userIdParam = String(userIdRaw || "").trim();
+
     if (!userIdParam || !Types.ObjectId.isValid(userIdParam)) {
       return res.status(400).json({
         success: false,
-        message: "Thiáº¿u hoáº·c sai userId",
+        message: "Thiếu hoặc sai định dạng userId",
       });
     }
     const userId = new Types.ObjectId(userIdParam);
 
+    // 2. Lấy dữ liệu hành vi người dùng (Parallel Fetching)
     const [viewedDocs, historyDocs] = await Promise.all([
-      ViewedItem.find({ userId }).sort({ viewedAt: -1 }).limit(20).lean(),
-      SearchHistory.find({ userId }).sort({ createdAt: -1 }).limit(10).lean(),
+      ViewedItem.find({ userId })
+        .sort({ viewedAt: -1 })
+        .limit(20)
+        .select("itemId")
+        .lean(),
+      SearchHistory.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("query")
+        .lean(),
     ]);
 
     const viewedItemIds = viewedDocs.map((v) => v.itemId);
 
+    // 3. Phân tích Top Categories (Tối ưu logic đếm)
     let topCategories: string[] = [];
-    if (viewedItemIds.length) {
-      const viewedItems = await Item.find({ _id: { $in: viewedItemIds } })
+    if (viewedItemIds.length > 0) {
+      // Chỉ lấy field category để nhẹ query
+      const viewedItemsDetails = await Item.find({
+        _id: { $in: viewedItemIds },
+      })
         .select("category")
         .lean();
-      const counts = new Map<string, number>();
-      viewedItems.forEach((it) => {
-        if (it.category) {
-          counts.set(it.category, (counts.get(it.category) ?? 0) + 1);
+
+      const categoryCounts = viewedItemsDetails.reduce((acc, item) => {
+        if (item.category) {
+          acc[item.category] = (acc[item.category] || 0) + 1;
         }
-      });
-      topCategories = Array.from(counts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(([cat]) => cat)
-        .slice(0, 5);
+        return acc;
+      }, {} as Record<string, number>);
+
+      topCategories = Object.entries(categoryCounts)
+        .sort(([, countA], [, countB]) => countB - countA) // Sort giảm dần
+        .slice(0, 5) // Lấy top 5
+        .map(([cat]) => cat);
     }
 
-    const searchQueries = historyDocs.map((h) => h.query).filter(Boolean).slice(0, 5);
+    // 4. Chuẩn bị từ khóa tìm kiếm
+    const searchQueries = historyDocs
+      .map((h) => h.query?.trim())
+      .filter((q): q is string => !!q); // Type guard lọc null/empty
 
-    const filter: any = { status: "ACTIVE" };
-    if (topCategories.length) filter.category = { $in: topCategories };
+    // 5. Xây dựng Query thông minh (Logic OR thay vì AND)
+    const queryConditions: any[] = [];
 
-    const orConditions: any[] = [];
-    searchQueries.forEach((q) => {
-      orConditions.push({ title: { $regex: q, $options: "i" } });
-      orConditions.push({ description: { $regex: q, $options: "i" } });
-    });
-    if (orConditions.length) filter.$or = orConditions;
+    // Điều kiện A: Thuộc category hay xem
+    if (topCategories.length > 0) {
+      queryConditions.push({ category: { $in: topCategories } });
+    }
 
-    const excludeIds = viewedItemIds.length ? { _id: { $nin: viewedItemIds } } : {};
+    // Điều kiện B: Khớp từ khóa tìm kiếm (Chỉ tìm Title để tối ưu performance)
+    if (searchQueries.length > 0) {
+      // Tạo regex cho mỗi từ khóa
+      const searchRegexes = searchQueries.map((q) => ({
+        title: { $regex: q, $options: "i" },
+      }));
+      queryConditions.push(...searchRegexes);
+    }
 
-    let items = await Item.find({ ...filter, ...excludeIds })
-      .sort({ favoritesCount: -1, createdAt: -1 })
-      .limit(20);
+    // Base Filter
+    const finalQuery: any = {
+      status: "ACTIVE",
+      _id: { $nin: viewedItemIds }, // Loại trừ items đã xem
+    };
 
-    if (!items.length) {
-      items = await Item.find({ status: "ACTIVE" }).sort({ createdAt: -1 }).limit(20);
+    // Nếu có điều kiện sở thích/tìm kiếm thì dùng $or, ngược lại query rỗng (sẽ fail xuống fallback)
+    if (queryConditions.length > 0) {
+      finalQuery.$or = queryConditions;
+    }
+
+    // 6. Thực thi Query chính
+    let items: any[] = [];
+    if (queryConditions.length > 0) {
+      items = await Item.find(finalQuery)
+        .sort({ favoritesCount: -1, createdAt: -1 }) // Ưu tiên item hot & mới
+        .limit(20)
+        .lean();
+    }
+
+    // 7. Fallback: Nếu không có gợi ý hoặc user mới (Cold start)
+    // Lấy các item mới nhất
+    if (items.length === 0) {
+      items = await Item.find({
+        status: "ACTIVE",
+        _id: { $nin: viewedItemIds }, // Vẫn nên loại trừ cái đã xem
+      })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
     }
 
     return res.json({
       success: true,
       data: items,
       meta: {
-        viewedCount: viewedDocs.length,
-        searchQueryCount: searchQueries.length,
+        recommendationType:
+          queryConditions.length > 0 ? "personalized" : "latest",
         usedCategories: topCategories,
+        usedKeywords: searchQueries,
       },
     });
   } catch (err) {
-    console.error("ForYou error:", err);
+    console.error("ForYou Error:", err);
+    // Đảm bảo encoding message tiếng Việt đúng
     return res.status(500).json({
       success: false,
-      message: "Lá»—i server khi láº¥y gá»£i Ã½ cho báº¡n",
+      message: "Lỗi server khi lấy gợi ý cho bạn",
     });
   }
 };
-

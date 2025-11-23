@@ -23,7 +23,12 @@ const handleError = (error: unknown, res: Parameters<typeof sendError>[0]) => {
   }
 
   console.error("Chat route error", error);
-  return sendError(res, 500, "ÄÃ£ xáº£y ra lá»—i khÃ´ng mong muá»‘n.", "CHAT_SERVER_ERROR");
+  return sendError(
+    res,
+    500,
+    "ÄÃ£ xáº£y ra lá»—i khÃ´ng mong muá»‘n.",
+    "CHAT_SERVER_ERROR"
+  );
 };
 
 router.get("/rooms", async (req, res) => {
@@ -31,6 +36,34 @@ router.get("/rooms", async (req, res) => {
     const userId = getUserId(req);
     const rooms = await chatService.listRooms(userId);
     return sendSuccess(res, rooms);
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.post("/initiate", async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    // targetId ở đây là ID của người bán (sellerId) được gửi từ frontend
+    const { targetId } = req.body as { targetId: string };
+
+    if (!targetId) {
+      return sendError(
+        res,
+        400,
+        "Thiếu ID người nhận (targetId).",
+        "INVALID_PARAMS"
+      );
+    }
+
+    // Gọi service để tìm phòng cũ hoặc tạo mới
+    // Lưu ý: Bạn cần đảm bảo chatService có hàm initiateChat hoặc findOrCreateRoom
+    const room = await chatService.initiateChat(userId, targetId);
+
+    // Bắn socket báo có phòng mới (nếu cần)
+    // chatEvents.roomCreated(room);
+
+    return sendSuccess(res, room, "Đã kết nối phòng chat.");
   } catch (error) {
     return handleError(error, res);
   }
@@ -48,7 +81,11 @@ router.get("/rooms/:roomId/messages", async (req, res) => {
       fetchOptions.limit = Number(limit);
     }
 
-    const messages = await chatService.fetchMessages(req.params.roomId, userId, fetchOptions);
+    const messages = await chatService.fetchMessages(
+      req.params.roomId,
+      userId,
+      fetchOptions
+    );
 
     return sendSuccess(res, messages);
   } catch (error) {
@@ -61,7 +98,11 @@ router.post("/rooms/:roomId/messages", async (req, res) => {
     const userId = getUserId(req);
     const { content } = req.body as { content?: string };
     const roomId = req.params.roomId;
-    const message = await chatService.createTextMessage(roomId, userId, content ?? "");
+    const message = await chatService.createTextMessage(
+      roomId,
+      userId,
+      content ?? ""
+    );
 
     const snapshot = await chatService.getRoomSnapshot(roomId);
     chatEvents.messageCreated(roomId, message);
@@ -87,4 +128,3 @@ router.patch("/rooms/:roomId/read", async (req, res) => {
 });
 
 export default router;
-

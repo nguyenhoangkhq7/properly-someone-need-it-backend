@@ -25,7 +25,7 @@ export const env = {
   API_PREFIX: process.env.API_PREFIX ?? "/api",
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET ?? "dev_access_secret",
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET ?? "dev_refresh_secret",
-  ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
+  ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "1h",
   REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
   ALLOWED_ORIGINS: toStringArray(process.env.ALLOWED_ORIGINS, ["*"]),
   SOCKET_ALLOWED_ORIGINS: toStringArray(process.env.SOCKET_ALLOWED_ORIGINS, ["*"]),
@@ -37,12 +37,13 @@ export const env = {
   AUTH_RATE_LIMIT_WINDOW_MS: toNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 5 * 60 * 1000),
   AUTH_RATE_LIMIT_MAX: toNumber(process.env.AUTH_RATE_LIMIT_MAX, 10),
 
-  EMAIL_FROM: process.env.EMAIL_FROM ?? "hoanpv076@gmail.com",
-  SMTP_HOST: process.env.SMTP_HOST ?? "smtp.gmail.com",
+  // Leave SMTP empty by default so dev env falls back to console logging
+  EMAIL_FROM: process.env.EMAIL_FROM ?? "",
+  SMTP_HOST: process.env.SMTP_HOST ?? "",
   SMTP_PORT: toNumber(process.env.SMTP_PORT, 587),
   SMTP_SECURE: toBoolean(process.env.SMTP_SECURE, false),
-  SMTP_USER: process.env.SMTP_USER ?? "hoanpv076@gmail.com",
-  SMTP_PASS: process.env.SMTP_PASS ?? "thfracfvugmxwgos",
+  SMTP_USER: process.env.SMTP_USER ?? "",
+  SMTP_PASS: process.env.SMTP_PASS ?? "",
   // OpenRouter (Æ°u tiÃªn)
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
   OPENROUTER_BASE_URL:

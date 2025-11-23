@@ -10,6 +10,7 @@ import chatRouter from "./routes/chat";
 import itemRoutes from "./routes/itemRoutes";
 import searchRoutes from "./routes/searchRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import userRoutes from "./routes/userRoutes";
 import { requestLogger } from "./middlewares/logger";
 import { createChatGateway } from "./socket/chatGateway";
 
@@ -47,6 +48,7 @@ const mountRoutes = (prefix: string) => {
   app.use(`${prefix}/orders`, orderRoutes);
   app.use(`${prefix}/items`, itemRoutes);
   app.use(`${prefix}/search`, searchRoutes);
+  app.use(`${prefix}/users`, userRoutes);
 
   app.get(`${prefix}/health`, (_req: Request, res: Response) => {
     res.json({ status: "ok" });

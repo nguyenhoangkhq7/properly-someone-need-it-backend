@@ -5,7 +5,7 @@ export interface IChatRoom extends Document {
   _id: ObjectId;
   buyerId: ObjectId;
   sellerId: ObjectId;
-  itemId: ObjectId;
+  itemId?: ObjectId | null;
   unreadCount: { buyer: number; seller: number };
   status: "ACTIVE" | "ARCHIVED";
   lastMessage?: string;
@@ -16,7 +16,12 @@ const chatRoomSchema = new Schema<IChatRoom>(
   {
     buyerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    itemId: { type: Schema.Types.ObjectId, ref: "Item", required: true },
+    itemId: {
+      type: Schema.Types.ObjectId,
+      ref: "Item",
+      required: false,
+      default: null,
+    },
     unreadCount: {
       buyer: { type: Number, default: 0 },
       seller: { type: Number, default: 0 },
