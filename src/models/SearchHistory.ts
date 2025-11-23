@@ -1,21 +1,35 @@
 ﻿import { Schema, model, Document, Types } from "mongoose";
 
+// 1. CẬP NHẬT INTERFACE: Thêm lastSearchedAt vào đây
 export interface ISearchHistory extends Document {
   userId: Types.ObjectId;
   query: string;
-  createdAt: Date;
+  lastSearchedAt: Date; // <--- Thêm dòng này để khớp với Schema
 }
 
+// 2. Schema (Giữ nguyên logic tối ưu)
 const searchHistorySchema = new Schema<ISearchHistory>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     query: { type: String, required: true, trim: true },
+    // count: { type: Number, default: 1 }, // (Optional) Nếu bạn muốn đếm số lần tìm
+    lastSearchedAt: { type: Date, default: Date.now },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  {
+    timestamps: false, // Tắt timestamps mặc định vì ta tự quản lý lastSearchedAt
+  }
 );
 
-// Tá»± Ä‘á»™ng xÃ³a sau 7 ngÃ y
-searchHistorySchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 });
+// Index TTL: Xóa sau 7 ngày tính từ lastSearchedAt
+searchHistorySchema.index(
+  { lastSearchedAt: 1 },
+  { expireAfterSeconds: 60 * 60 * 24 * 7 }
+);
 
-export const SearchHistory = model<ISearchHistory>("SearchHistory", searchHistorySchema);
+// Index tìm kiếm nhanh: Tìm user đó đã search từ khóa gì gần đây nhất
+searchHistorySchema.index({ userId: 1, lastSearchedAt: -1 });
 
+export const SearchHistory = model<ISearchHistory>(
+  "SearchHistory",
+  searchHistorySchema
+);

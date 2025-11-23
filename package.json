@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/scripts/seedData.ts",
+    "seedMore": "tsx src/scripts/seedMoreData.ts",
     "backfill:embeddings": "tsx src/scripts/backfillEmbeddings.ts"
   },
   "keywords": [],

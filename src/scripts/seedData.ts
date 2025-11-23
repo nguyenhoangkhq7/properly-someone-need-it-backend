@@ -1,27 +1,15 @@
 ﻿// scripts/seed.ts
 import mongoose from "mongoose";
-import {
-  User,
-  Item,
-  Order,
-  ChatRoom,
-  Message,
-  Review,
-} from "../models/index"; // <-- Ä‘iá»u chá»‰nh Ä‘Æ°á»ng dáº«n náº¿u cáº§n
+import { User, Item, Order, ChatRoom, Message, Review } from "../models/index";
 
 const MONGO_URI = "mongodb://localhost:27017/psni";
 
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);
-  });
-
 const seedData = async () => {
   try {
-    // XÃ³a dá»¯ liá»‡u cÅ©
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB connected");
+
+    // 1. Clean Data
     await Promise.all([
       User.deleteMany({}),
       Item.deleteMany({}),
@@ -30,17 +18,18 @@ const seedData = async () => {
       Message.deleteMany({}),
       Review.deleteMany({}),
     ]);
-    console.log("Cleared old data");
+    console.log("🧹 Cleared old data");
 
-    // ==================== 1. Táº O 5 USER ====================
+    // 2. Create Users (5 User đại diện 3 miền để test Location)
     const users = await User.insertMany([
       {
-        fullName: "Nguyá»…n VÄƒn An",
+        fullName: "Nguyễn Văn An",
+        email: "an.nguyen@test.com", // Bổ sung email
         phone: "+84912345678",
         avatar: "https://i.pravatar.cc/150?img=1",
         address: {
-          city: "HÃ  Ná»™i",
-          district: "Cáº§u Giáº¥y",
+          city: "Hà Nội",
+          district: "Cầu Giấy",
           location: { type: "Point", coordinates: [105.7924, 21.0305] },
         },
         rating: 5.0,
@@ -48,14 +37,16 @@ const seedData = async () => {
         successfulTrades: 0,
         trustScore: 100,
         fcmTokens: ["fake-fcm-1"],
+        isVerified: true, // Thêm tích xanh cho uy tín
       },
       {
-        fullName: "Tráº§n Thá»‹ BÃ©",
+        fullName: "Trần Thị Bé",
+        email: "be.tran@test.com", // Bổ sung email
         phone: "+84987654321",
-        avatar: "https://i.pravatar.cc/150?img=2",
+        avatar: "https://i.pravatar.cc/150?img=5",
         address: {
-          city: "TP Há»“ ChÃ­ Minh",
-          district: "Quáº­n 1",
+          city: "TP Hồ Chí Minh",
+          district: "Quận 1",
           location: { type: "Point", coordinates: [106.6999, 10.7754] },
         },
         rating: 4.9,
@@ -63,14 +54,16 @@ const seedData = async () => {
         successfulTrades: 0,
         trustScore: 98,
         fcmTokens: ["fake-fcm-2"],
+        isVerified: true,
       },
       {
-        fullName: "LÃª VÄƒn CÆ°á»ng",
+        fullName: "Lê Văn Cường",
+        email: "cuong.le@test.com", // Bổ sung email
         phone: "+84911223344",
         avatar: "https://i.pravatar.cc/150?img=3",
         address: {
-          city: "ÄÃ  Náºµng",
-          district: "Háº£i ChÃ¢u",
+          city: "Đà Nẵng",
+          district: "Hải Châu",
           location: { type: "Point", coordinates: [108.2097, 16.0471] },
         },
         rating: 4.8,
@@ -78,14 +71,16 @@ const seedData = async () => {
         successfulTrades: 0,
         trustScore: 95,
         fcmTokens: ["fake-fcm-3"],
+        isVerified: false,
       },
       {
-        fullName: "Pháº¡m Minh Duy",
+        fullName: "Phạm Minh Duy",
+        email: "duy.pham@test.com", // Bổ sung email
         phone: "+84944556677",
-        avatar: "https://i.pravatar.cc/150?img=5",
+        avatar: "https://i.pravatar.cc/150?img=13",
         address: {
-          city: "HÃ  Ná»™i",
-          district: "HoÃ n Kiáº¿m",
+          city: "Hà Nội",
+          district: "Hoàn Kiếm",
           location: { type: "Point", coordinates: [105.8544, 21.0285] },
         },
         rating: 5.0,
@@ -93,14 +88,16 @@ const seedData = async () => {
         successfulTrades: 0,
         trustScore: 100,
         fcmTokens: ["fake-fcm-4"],
+        isVerified: true,
       },
       {
-        fullName: "HoÃ ng Thá»‹ Em",
+        fullName: "Hoàng Thị Em",
+        email: "em.hoang@test.com", // Bổ sung email
         phone: "+84999888777",
-        avatar: "https://i.pravatar.cc/150?img=4",
+        avatar: "https://i.pravatar.cc/150?img=9",
         address: {
-          city: "TP Há»“ ChÃ­ Minh",
-          district: "BÃ¬nh Tháº¡nh",
+          city: "TP Hồ Chí Minh",
+          district: "Bình Thạnh",
           location: { type: "Point", coordinates: [106.7153, 10.8025] },
         },
         rating: 4.7,
@@ -108,439 +105,492 @@ const seedData = async () => {
         successfulTrades: 0,
         trustScore: 92,
         fcmTokens: ["fake-fcm-5"],
+        isVerified: false,
       },
     ]);
 
-    console.log("5 users created");
+    const getUser = (idx: number) => users[idx % 5]._id;
+    const getLoc = (idx: number) => users[idx % 5].address.location;
 
-    // ==================== 2. Táº O 25 ITEM ====================
-    const items = await Item.insertMany([
-      // User 0 â€“ An (5 mÃ³n)
+    // 3. Create 30 Semantic-Rich Items
+    const itemsData = [
+      // --- PHONES (6 items) ---
       {
-        sellerId: users[0]._id,
-        title: "iPhone 13 Pro 256GB",
-        description: "iPhone 13 Pro 256GB, Ä‘áº¹p 99%, phá»¥ kiá»‡n cÆ¡ báº£n.",
+        sellerId: getUser(0),
         category: "PHONE",
+        title: "iPhone 15 Pro Max 256GB Titan Tự Nhiên VNA",
+        description:
+          "Cần bán iPhone 15 Pro Max bản VNA chính hãng còn bảo hành đến 10/2025. Màu Titan tự nhiên hot nhất năm. Tình trạng: Pin sạc 30 lần còn 100%, ngoại hình đẹp keng như mới bóc hộp, không một vết xước dăm. Máy fullbox cáp zin chưa đụng tới. Phù hợp cho ai tìm máy lướt tiết kiệm vài triệu so với đập hộp. Tặng kèm ốp lưng UAG xịn.",
+        price: 28500000,
         condition: "LIKE_NEW",
-        price: 16500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=1"],
-        location: { type: "Point", coordinates: [105.7924, 21.0305] },
         status: "ACTIVE",
-      },
-      {
-        sellerId: users[0]._id,
-        title: "MacBook Air M1",
-        description: "MacBook Air M1, pin tá»‘t, mÃ¡y mÆ°á»£t, khÃ´ng xÆ°á»›c lá»›n.",
-        category: "LAPTOP",
-        condition: "GOOD",
-        price: 18500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=2"],
-        location: { type: "Point", coordinates: [105.7924, 21.0305] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[0]._id,
-        title: "Apple Watch Series 7 45mm",
-        description: "Apple Watch S7, dÃ¢y zin, Ã­t tráº§y, pin á»•n.",
-        category: "WATCH",
-        condition: "LIKE_NEW",
-        price: 8500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=3"],
-        location: { type: "Point", coordinates: [105.7924, 21.0305] },
-        status: "SOLD",
-      },
-      {
-        sellerId: users[0]._id,
-        title: "AirPods Pro 2",
-        description: "AirPods Pro 2, chá»‘ng á»“n tá»‘t, kÃ¨m há»™p sáº¡c.",
-        category: "HEADPHONE",
-        condition: "LIKE_NEW",
-        price: 5500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=4"],
-        location: { type: "Point", coordinates: [105.7924, 21.0305] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[0]._id,
-        title: "Samsung S22 Ultra 256GB",
-        description: "S22 Ultra 256GB, mÃ n Ä‘áº¹p, kÃ¨m á»‘p.",
-        category: "PHONE",
-        condition: "GOOD",
-        price: 13500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=5"],
-        location: { type: "Point", coordinates: [105.7924, 21.0305] },
-        status: "ACTIVE",
-      },
-
-      // User 1 â€“ BÃ© (5 mÃ³n)
-      {
-        sellerId: users[1]._id,
-        title: "iPhone 14 Pro Max 128GB",
-        description: "iPhone 14 Pro Max 128GB, mÃ¡y Ä‘áº¹p, hÃ ng chÃ­nh hÃ£ng.",
-        category: "PHONE",
-        condition: "LIKE_NEW",
-        price: 24500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=6"],
-        location: { type: "Point", coordinates: [106.6999, 10.7754] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[1]._id,
-        title: "Dell XPS 13",
-        description: "Dell XPS 13, mÃ n Ä‘áº¹p, kÃ¨m sáº¡c, mÃ¡y má»ng nháº¹.",
-        category: "LAPTOP",
-        condition: "GOOD",
-        price: 22500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=7"],
-        location: { type: "Point", coordinates: [106.6999, 10.7754] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[1]._id,
-        title: "iPad Air 5 256GB",
-        description: "iPad Air 5 256GB, bÃºt mÆ°á»£t, pin á»•n.",
-        category: "TABLET",
-        condition: "LIKE_NEW",
-        price: 14500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=8"],
-        location: { type: "Point", coordinates: [106.6999, 10.7754] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[1]._id,
-        title: "Sony WH-1000XM5",
-        description: "Tai nghe Sony XM5, chá»‘ng á»“n siÃªu tá»‘t, há»™p Ä‘áº§y Ä‘á»§.",
-        category: "HEADPHONE",
-        condition: "GOOD",
-        price: 6800000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=9"],
-        location: { type: "Point", coordinates: [106.6999, 10.7754] },
-        status: "SOLD",
-      },
-      {
-        sellerId: users[1]._id,
-        title: "Galaxy Watch 5 Pro",
-        description: "Galaxy Watch 5 Pro, dÃ¢y zin, pin á»•n Ä‘á»‹nh.",
-        category: "WATCH",
-        condition: "LIKE_NEW",
-        price: 7500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=10"],
-        location: { type: "Point", coordinates: [106.6999, 10.7754] },
-        status: "ACTIVE",
-      },
-
-      // User 2 â€“ CÆ°á»ng (5 mÃ³n)
-      {
-        sellerId: users[2]._id,
-        title: "iPhone 12 Pro 128GB",
-        description: "iPhone 12 Pro 128GB, xÃ¡ch tay, pin cÃ²n tá»‘t.",
-        category: "PHONE",
-        condition: "GOOD",
-        price: 10500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=11"],
-        location: { type: "Point", coordinates: [108.2097, 16.0471] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[2]._id,
-        title: "Surface Laptop 4",
-        description: "Surface Laptop 4, mÃ n cáº£m á»©ng, vá» nhÃ´m Ä‘áº¹p.",
-        category: "LAPTOP",
-        condition: "FAIR",
-        price: 13500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=12"],
-        location: { type: "Point", coordinates: [108.2097, 16.0471] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[2]._id,
-        title: "Galaxy Tab S8",
-        description: "Galaxy Tab S8, mÃ n 120Hz, bÃºt Ä‘áº§y Ä‘á»§.",
-        category: "TABLET",
-        condition: "LIKE_NEW",
-        price: 12500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=13"],
-        location: { type: "Point", coordinates: [108.2097, 16.0471] },
-        status: "SOLD",
-      },
-      {
-        sellerId: users[2]._id,
-        title: "Bose QC45",
-        description: "Bose QC45, chá»‘ng á»“n tá»‘t, Ä‘á»‡m tai Ãªm.",
-        category: "HEADPHONE",
-        condition: "GOOD",
-        price: 5800000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=14"],
-        location: { type: "Point", coordinates: [108.2097, 16.0471] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[2]._id,
-        title: "Garmin Fenix 6",
-        description: "Garmin Fenix 6, dÃ nh cho thá»ƒ thao, kÃ­nh cÃ²n Ä‘áº¹p.",
-        category: "WATCH",
-        condition: "GOOD",
-        price: 9500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=15"],
-        location: { type: "Point", coordinates: [108.2097, 16.0471] },
-        status: "ACTIVE",
-      },
-
-      // User 3 â€“ Duy (5 mÃ³n)
-      {
-        sellerId: users[3]._id,
-        title: "Xiaomi 13 Pro",
-        description: "Xiaomi 13 Pro, mÃ n Ä‘áº¹p, sáº¡c nhanh 120W.",
-        category: "PHONE",
-        condition: "LIKE_NEW",
-        price: 15500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=16"],
-        location: { type: "Point", coordinates: [105.8544, 21.0285] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[3]._id,
-        title: "ThinkPad X1 Carbon G10",
-        description: "ThinkPad X1 Gen 10, bÃ n phÃ­m tá»‘t, pin khÃ¡.",
-        category: "LAPTOP",
-        condition: "GOOD",
-        price: 26500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=17"],
-        location: { type: "Point", coordinates: [105.8544, 21.0285] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[3]._id,
-        title: "iPad Pro 11 M1",
-        description: "iPad Pro 11 M1, mÃ n 120Hz, FaceID mÆ°á»£t.",
-        category: "TABLET",
-        condition: "LIKE_NEW",
-        price: 16500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=18"],
-        location: { type: "Point", coordinates: [105.8544, 21.0285] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[3]._id,
-        title: "Jabra Elite 85t",
-        description: "Jabra Elite 85t, chá»‘ng á»“n, mic rÃµ.",
-        category: "HEADPHONE",
-        condition: "GOOD",
-        price: 3800000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=19"],
-        location: { type: "Point", coordinates: [105.8544, 21.0285] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[3]._id,
-        title: "Apple Watch SE 44mm",
-        description: "Apple Watch SE 44mm, cháº¡y mÆ°á»£t, dÃ¢y má»›i.",
-        category: "WATCH",
-        condition: "FAIR",
-        price: 4800000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=20"],
-        location: { type: "Point", coordinates: [105.8544, 21.0285] },
-        status: "SOLD",
-      },
-
-      // User 4 â€“ Em (5 mÃ³n)
-      {
-        sellerId: users[4]._id,
-        title: "Oppo Find X5 Pro",
-        description: "Oppo Find X5 Pro, camera Ä‘áº¹p, sáº¡c nhanh.",
-        category: "PHONE",
-        condition: "GOOD",
-        price: 12500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=21"],
-        location: { type: "Point", coordinates: [106.7153, 10.8025] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[4]._id,
-        title: "Asus ROG Zephyrus G14",
-        description: "ROG G14, GPU rá»i áº¥n tÆ°á»£ng, mÃ¡y gá»n.",
-        category: "LAPTOP",
-        condition: "LIKE_NEW",
-        price: 29500000,
-        isNegotiable: false,
-        images: ["https://picsum.photos/400/400?random=22"],
-        location: { type: "Point", coordinates: [106.7153, 10.8025] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[4]._id,
-        title: "Samsung Galaxy Z Fold 4",
-        description: "Z Fold 4, mÃ n gáº­p á»•n, phá»¥ kiá»‡n cÆ¡ báº£n.",
-        category: "PHONE",
-        condition: "GOOD",
-        price: 21500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=23"],
-        location: { type: "Point", coordinates: [106.7153, 10.8025] },
-        status: "SOLD",
-      },
-      {
-        sellerId: users[4]._id,
-        title: "Anker Soundcore Liberty 3 Pro",
-        description: "Anker Liberty 3 Pro, bass máº¡nh, há»™p Ä‘áº§y Ä‘á»§.",
-        category: "HEADPHONE",
-        condition: "LIKE_NEW",
-        price: 2500000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=24"],
-        location: { type: "Point", coordinates: [106.7153, 10.8025] },
-        status: "ACTIVE",
-      },
-      {
-        sellerId: users[4]._id,
-        title: "Fitbit Sense",
-        description: "Fitbit Sense, Ä‘o sá»©c khá»e á»•n, dÃ¢y Ä‘eo Ãªm.",
-        category: "WATCH",
-        condition: "GOOD",
-        price: 4200000,
-        isNegotiable: true,
-        images: ["https://picsum.photos/400/400?random=25"],
-        location: { type: "Point", coordinates: [106.7153, 10.8025] },
-        status: "ACTIVE",
-      },
-    ]);
-
-    console.log("25 items created");
-
-    // ==================== 3. Táº O 5 ORDER HOÃ€N THÃ€NH + REVIEW ====================
-    const soldItemIndices = [2, 8, 12, 19, 22]; // cÃ¡c item Ä‘Ã£ Ä‘á»ƒ status SOLD á»Ÿ trÃªn
-    const completedOrders = await Order.insertMany(
-      soldItemIndices.map((idx, i) => ({
-        buyerId: users[(i + 1) % 5]._id, // ngÆ°á»i mua luÃ¢n phiÃªn
-        sellerId: items[idx].sellerId,
-        itemId: items[idx]._id,
-        priceAtPurchase: items[idx].price,
-        finalPrice: items[idx].price * 0.95, // giáº£m nháº¹ Ä‘á»ƒ cÃ³ finalPrice
-        status: "COMPLETED",
-      }))
-    );
-
-    const reviews = await Review.insertMany([
-      {
-        orderId: completedOrders[0]._id,
-        reviewerId: users[1]._id,
-        sellerId: items[2].sellerId,
-        itemId: items[2]._id,
-        rating: 5,
-        comment:
-          "Sáº£n pháº©m Ä‘áº¹p nhÆ° má»›i, anh shipper thÃ¢n thiá»‡n, giao dá»‹ch ráº¥t ok!",
-        images: ["https://picsum.photos/600/600?random=100"],
-      },
-      {
-        orderId: completedOrders[1]._id,
-        reviewerId: users[2]._id,
-        sellerId: items[8].sellerId,
-        itemId: items[8]._id,
-        rating: 5,
-        comment:
-          "Tai nghe cÃ²n ráº¥t má»›i, chá»‘ng á»“n tuyá»‡t vá»i. Sáº½ mua tiáº¿p cá»§a shop!",
-      },
-      {
-        orderId: completedOrders[2]._id,
-        reviewerId: users[3]._id,
-        sellerId: items[12].sellerId,
-        itemId: items[12]._id,
-        rating: 4,
-        comment: "MÃ¡y Ä‘áº¹p, pin á»•n, chá»‰ tiáº¿c há»™p khÃ´ng cÃ²n Ä‘áº§y Ä‘á»§ phá»¥ kiá»‡n.",
-      },
-      {
-        orderId: completedOrders[3]._id,
-        reviewerId: users[4]._id,
-        sellerId: items[19].sellerId,
-        itemId: items[19]._id,
-        rating: 5,
-        comment: "Giao dá»‹ch nhanh gá»n, hÃ ng Ä‘Ãºng mÃ´ táº£ 100%",
+        location: getLoc(0),
         images: [
-          "https://picsum.photos/600/600?random=101",
-          "https://picsum.photos/600/600?random=102",
+          "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=500",
         ],
+        brand: "Apple",
+        modelName: "iPhone 15 Pro Max",
       },
       {
-        orderId: completedOrders[4]._id,
-        reviewerId: users[0]._id,
-        sellerId: items[22].sellerId,
-        itemId: items[22]._id,
-        rating: 5,
-        comment: "Ráº¥t hÃ i lÃ²ng, chá»‹ chá»§ nhiá»‡t tÃ¬nh, hÃ ng cháº¥t lÆ°á»£ng cao.",
-      },
-    ]);
-
-    console.log("5 completed orders + 5 reviews created");
-
-    // ==================== 4. MáºªU CHATROOM + MESSAGES (tuá»³ chá»n) ====================
-    const sampleChat = await ChatRoom.create({
-      buyerId: users[0]._id,
-      sellerId: users[1]._id,
-      itemId: items[5]._id,
-      unreadCount: { buyer: 0, seller: 3 },
-      lastMessage: "Chá»‘t Ä‘Æ¡n nhÃ© anh!",
-      lastMessageAt: new Date(),
-    });
-
-    await Message.insertMany([
-      {
-        chatRoomId: sampleChat._id,
-        senderId: users[0]._id,
-        content: "ChÃ o chá»‹, iPhone 14 Pro Max cÃ²n khÃ´ng áº¡?",
-        messageType: "TEXT",
+        sellerId: getUser(1),
+        category: "PHONE",
+        title: "Samsung S23 Ultra 5G - Zoom mặt trăng đỉnh cao",
+        description:
+          "Lên đời S24 nên pass lại S23 Ultra màu Xanh Botanic. Máy chuyên dùng đi đu concert, zoom 100x cực nét. Bút SPen nhạy, thích hợp cho dân văn phòng note nhanh hoặc vẽ vời. Màn hình Dynamic AMOLED 2X xem phim Netflix cực đã. Viền có xước nhẹ do dùng ốp cứng, màn hình đã dán UV. Full chức năng không lỗi lầm.",
+        price: 16200000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=500",
+        ],
+        brand: "Samsung",
+        modelName: "Galaxy S23 Ultra",
       },
       {
-        chatRoomId: sampleChat._id,
-        senderId: users[1]._id,
-        content: "CÃ²n em Æ¡i, mÃ¡y Ä‘áº¹p 99%",
-        messageType: "TEXT",
+        sellerId: getUser(4),
+        category: "PHONE",
+        title: "Xiaomi Redmi Note 12 Pro cũ giá sinh viên",
+        description:
+          "Máy mua về chạy Grab được 3 tháng. Pin trâu 5000mAh chạy cả ngày không hết. Màn hình 120Hz lướt TikTok mượt. Bị nứt kính nhẹ ở góc không ảnh hưởng cảm ứng. Bán rẻ cho anh em chạy xe ôm công nghệ hoặc mua về làm máy phụ phát wifi, nghe gọi.",
+        price: 2500000,
+        condition: "FAIR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1598327105666-5b89351aff23?w=500",
+        ],
+        brand: "Xiaomi",
+        modelName: "Redmi Note 12 Pro",
       },
       {
-        chatRoomId: sampleChat._id,
-        senderId: users[0]._id,
-        content: "Chá»‘t Ä‘Æ¡n nhÃ© anh!",
-        messageType: "TEXT",
+        sellerId: getUser(0),
+        category: "PHONE",
+        title: "Google Pixel 7 Pro Quốc tế - Camera chụp đêm bá đạo",
+        description:
+          "Trải nghiệm xong cần bán Pixel 7 Pro. Thuật toán chụp ảnh của Google quá đỉnh, đặc biệt là chụp đêm Night Sight và xóa phông. Android gốc (Stock Android) siêu mượt, cập nhật sớm nhất. Máy trần, màn hình đẹp không ám ố. Ai thích nhiếp ảnh điện thoại thì con này là trùm phân khúc giá.",
+        price: 9800000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(0),
+        images: [
+          "https://images.unsplash.com/photo-1610792516820-2bff50c8692c?w=500",
+        ],
+        brand: "Google",
+        modelName: "Pixel 7 Pro",
       },
-    ]);
+      {
+        sellerId: getUser(2),
+        category: "PHONE",
+        title: "Oppo Find N2 Flip Tím - Điện thoại gập cho nữ",
+        description:
+          "Điện thoại gập vỏ sò siêu cute màu tím. Màn hình phụ lớn nhất dòng Flip, dùng check tin nhắn hay soi gương trang điểm tiện lợi. Nếp gấp màn hình gần như tàng hình. Máy con gái dùng giữ kỹ, còn hộp và sạc nhanh SuperVOOC. Thích hợp làm quà tặng bạn gái.",
+        price: 11500000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1592750475338-74b7b2191392?w=500",
+        ],
+        brand: "Oppo",
+        modelName: "Find N2 Flip",
+      },
+      {
+        sellerId: getUser(4),
+        category: "PHONE",
+        title: "Nokia 1280 huyền thoại chống cháy",
+        description:
+          "Dọn nhà ra con máy cỏ. Loa to sóng khỏe, pin chờ cả tuần. Rớt 7749 lần không hư. Thích hợp mua về cho người già ở quê nghe gọi hoặc lắp sim rác.",
+        price: 150000,
+        condition: "POOR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1580910051074-3eb6948d3cc0?w=500",
+        ],
+        brand: "Nokia",
+        modelName: "1280",
+      },
 
-    console.log("Sample chatroom + messages created");
+      // --- LAPTOPS (5 items) ---
+      {
+        sellerId: getUser(0),
+        category: "LAPTOP",
+        title: "MacBook Air M1 2020 Gold - Vua văn phòng",
+        description:
+          "Bản Base Ram 8GB SSD 256GB. Chip M1 giờ vẫn quá mạnh, edit video CapCut hay Photoshop nhẹ nhàng vô tư. Điểm mạnh nhất là pin dùng thực tế 10 tiếng, đi cafe làm việc không cần mang sạc. Máy không quạt tản nhiệt nên im re tuyệt đối. Hình thức 99%, sạc 45 lần.",
+        price: 14500000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(0),
+        images: [
+          "https://images.unsplash.com/photo-1611186871348-640e787d11d0?w=500",
+        ],
+        brand: "Apple",
+        modelName: "MacBook Air M1",
+      },
+      {
+        sellerId: getUser(2),
+        category: "LAPTOP",
+        title: "Laptop Gaming Asus TUF F15 i7 RTX 3050",
+        description:
+          "Cần tiền build PC nên bán. Cấu hình khủng: Core i7 11800H, Card rời RTX 3050, Ram đã nâng lên 16GB, Màn hình 144Hz mượt mà. Chiến tốt các game AAA như GTA V, Cyberpunk (medium), Valorant, LOL max setting. Máy tản nhiệt tốt nhưng quạt hơi ồn khi chơi game nặng.",
+        price: 15800000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
+        ],
+        brand: "Asus",
+        modelName: "TUF Gaming F15",
+      },
+      {
+        sellerId: getUser(1),
+        category: "LAPTOP",
+        title: "Dell XPS 13 9310 4K Touch - Siêu mỏng nhẹ",
+        description:
+          "Dòng laptop doanh nhân cao cấp nhất của Dell. Màn hình 4K cảm ứng tràn viền InfinityEdge cực đẹp, màu sắc chuẩn đồ họa. Vỏ nhôm nguyên khối cắt CNC sang trọng. Nặng chỉ 1.2kg, bỏ vừa túi xách. Phù hợp cho sếp hoặc dân Sale hay đi gặp khách hàng.",
+        price: 21000000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1593642632823-8f78536788c6?w=500",
+        ],
+        brand: "Dell",
+        modelName: "XPS 13",
+      },
+      {
+        sellerId: getUser(4),
+        category: "LAPTOP",
+        title: "ThinkPad X1 Carbon Gen 6 cũ giá rẻ",
+        description:
+          "Máy nhập khẩu Nhật Bản. Bàn phím ThinkPad gõ sướng nhất thế giới, code xuyên đêm không mỏi tay. Cấu hình i5 Gen 8, Ram 8GB đủ code web, backend cơ bản. Ngoại hình xước dăm lớp nhung, màn hình có 1 điểm chết nhỏ xíu khó thấy. Giá tốt cho sinh viên IT.",
+        price: 6500000,
+        condition: "FAIR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1517336714731-489689fd1ca4?w=500",
+        ],
+        brand: "Lenovo",
+        modelName: "ThinkPad X1 Carbon",
+      },
+      {
+        sellerId: getUser(0),
+        category: "LAPTOP",
+        title: "MacBook Pro 14 inch M1 Pro 16GB/512GB",
+        description:
+          "Quái vật hiệu năng cho Designer và Coder. Màn hình Mini-LED XDR 120Hz đỉnh cao, màu đen sâu như OLED. Cổng kết nối đầy đủ (HDMI, Thẻ nhớ) không cần Hub chuyển. Loa nghe nhạc cực hay. Còn gói bảo hành Apple Care+ đến 2026.",
+        price: 32000000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(0),
+        images: [
+          "https://images.unsplash.com/photo-1517336714731-489689fd1ca4?w=500",
+        ],
+        brand: "Apple",
+        modelName: "MacBook Pro 14",
+      },
 
-    // ==================== HOÃ€N Táº¤T ====================
-    console.log("SEED HOÃ€N Táº¤T! Tá»•ng cá»™ng:");
-    console.log(`- Users   : ${users.length}`);
-    console.log(`- Items   : ${items.length}`);
-    console.log(`- Orders  : ${completedOrders.length}`);
-    console.log(`- Reviews : ${reviews.length}`);
-    console.log(`- ChatRoom: 1 (máº«u)`);
+      // --- TABLETS (3 items) ---
+      {
+        sellerId: getUser(1),
+        category: "TABLET",
+        title: "iPad Gen 9 64GB Wifi - Máy học online",
+        description:
+          "Mua về cho con học tiếng Anh nhưng giờ bé chán. Máy chủ yếu xem YouTube Kids. Mọi chức năng ổn định, pin rất trâu. Dòng iPad giá rẻ nhưng hiệu năng ngon nhất tầm giá. Tặng kèm bao da gấu cute và cường lực đã dán.",
+        price: 5200000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500",
+        ],
+        brand: "Apple",
+        modelName: "iPad Gen 9",
+      },
+      {
+        sellerId: getUser(2),
+        category: "TABLET",
+        title: "Samsung Galaxy Tab S9 Ultra - Thay thế Laptop",
+        description:
+          "Máy tính bảng Android màn hình siêu to khổng lồ 14.6 inch. Chống nước kháng bụi IP68 đầu tiên dòng Tab. Dùng kèm Samsung DeX làm việc như Laptop. Loa 4 hướng to như loa bluetooth. Kèm bàn phím bao da chính hãng (trị giá 5tr lúc mua).",
+        price: 22000000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=500",
+        ],
+        brand: "Samsung",
+        modelName: "Tab S9 Ultra",
+      },
+      {
+        sellerId: getUser(4),
+        category: "TABLET",
+        title: "iPad Mini 6 64GB Pink - Máy game cầm tay",
+        description:
+          "Kích thước nhỏ gọn bằng quyển sổ tay, cầm 1 tay chơi PUBG, Liên Quân cực sướng không mỏi. Chip A15 Bionic vẫn rất mạnh. Màu hồng nữ tính. Góc máy bị cấn nhẹ do rơi 1 lần, màn hình không nứt vỡ. Bán rẻ cho ai mua về cày game.",
+        price: 8500000,
+        condition: "FAIR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500",
+        ],
+        brand: "Apple",
+        modelName: "iPad Mini 6",
+      },
 
-    mongoose.disconnect();
-    process.exit(0);
+      // --- WATCHES (3 items) ---
+      {
+        sellerId: getUser(0),
+        category: "WATCH",
+        title: "Apple Watch Ultra 1 - Đồng hồ cho dân chạy bộ",
+        description:
+          "Thiết kế hầm hố, pin trâu 3 ngày (gấp đôi Apple Watch thường). Chuyên dụng cho chạy bộ trail, bơi lặn biển. GPS 2 băng tần cực chính xác. Viền Titan siêu bền, mặt kính Sapphire không trầy. Dây Alpine Loop màu cam nổi bật.",
+        price: 13500000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(0),
+        images: [
+          "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500",
+        ],
+        brand: "Apple",
+        modelName: "Watch Ultra",
+      },
+      {
+        sellerId: getUser(2),
+        category: "WATCH",
+        title: "Garmin Fenix 7X Solar - Pin năng lượng mặt trời",
+        description:
+          "Dòng cao cấp nhất của Garmin. Kính Power Glass sạc pin bằng ánh sáng mặt trời, dùng chế độ tiết kiệm pin cả tháng mới sạc. Bản đồ Offline tích hợp sẵn, dẫn đường đi rừng đi núi không cần điện thoại. Đo nhịp tim, giấc ngủ chuyên sâu. Fullbox.",
+        price: 18000000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=500",
+        ],
+        brand: "Garmin",
+        modelName: "Fenix 7X Solar",
+      },
+      {
+        sellerId: getUser(4),
+        category: "WATCH",
+        title: "Huawei Watch GT3 dây da cũ",
+        description:
+          "Đồng hồ thông minh giá rẻ nhưng pin trâu 14 ngày. Nghe gọi trực tiếp trên đồng hồ rõ ràng. Màn hình AMOLED đẹp. Dây da hơi sờn theo thời gian sử dụng (có thể thay dây khác dễ dàng). Phù hợp cho ai cần theo dõi sức khỏe cơ bản.",
+        price: 2100000,
+        condition: "FAIR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500",
+        ],
+        brand: "Huawei",
+        modelName: "Watch GT3",
+      },
+
+      // --- HEADPHONE (3 items) ---
+      {
+        sellerId: getUser(3),
+        category: "HEADPHONE",
+        title: "Tai nghe Sony WH-1000XM5 Chống ồn chủ động",
+        description:
+          "Vua chống ồn (ANC) hiện nay, đeo vào là điếc không nghe thấy tiếng người yêu cằn nhằn. Chất âm hay, bass sâu đặc trưng Sony. Thiết kế mới đeo êm hơn đời cũ. Màu đen, mới mua được 3 tháng tại Sony Center còn bảo hành dài.",
+        price: 5800000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(3),
+        images: [
+          "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=500",
+        ],
+        brand: "Sony",
+        modelName: "WH-1000XM5",
+      },
+      {
+        sellerId: getUser(0),
+        category: "HEADPHONE",
+        title: "AirPods 2 cũ - Tai nghe quốc dân",
+        description:
+          "Pass lại tai nghe AirPods 2. Kết nối iPhone mở nắp là nhận cực nhanh. Pin dock hơi chai, tai nghe nghe liên tục được khoảng 2h-2.5h. Phù hợp mua về nghe nhạc chống cháy hoặc đàm thoại video call. Đã vệ sinh sạch sẽ ráy tai bằng cồn.",
+        price: 800000,
+        condition: "POOR",
+        status: "ACTIVE",
+        location: getLoc(0),
+        images: [
+          "https://images.unsplash.com/photo-1572569028738-411a29630580?w=500",
+        ],
+        brand: "Apple",
+        modelName: "AirPods 2",
+      },
+      {
+        sellerId: getUser(1),
+        category: "HEADPHONE",
+        title: "Loa Marshall Stanmore II White - Decor phòng cực chill",
+        description:
+          "Loa bluetooth nhưng thiết kế Vintage cực đẹp, bày phòng khách hoặc quán cafe là hết ý. Chất âm mộc mạc, nghe Acoustic/Bolero rất hợp. Hàng xách tay US, điện 110-240V cắm trực tiếp. Màu trắng kem sang trọng, lưới ê-căng còn trắng sạch.",
+        price: 4500000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1545459720-aacaf5090834?w=500",
+        ],
+        brand: "Marshall",
+        modelName: "Stanmore II",
+      },
+
+      // --- MAPPED CATEGORIES (Other, Accessory) ---
+
+      // CAMERA -> Mapped to OTHER
+      {
+        sellerId: getUser(3),
+        category: "OTHER",
+        title: "Máy ảnh Sony Alpha A6400 + Lens Kit 16-50",
+        description:
+          "Combo máy ảnh mirrorless huyền thoại cho người mới tập chụp và quay video. Lấy nét siêu nhanh (Real-time Eye AF), quay video 4K không bị quá nhiệt. Sensor sạch, không mốc rễ tre. Tặng kèm túi đựng, thẻ nhớ 64GB và 2 pin for.",
+        price: 16500000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(3),
+        images: [
+          "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500",
+        ],
+        brand: "Sony",
+        modelName: "A6400",
+      },
+      {
+        sellerId: getUser(3),
+        category: "OTHER",
+        title: "Fujifilm X-T30 II Body Silver - Màu ảnh Film cực nghệ",
+        description:
+          "Máy ảnh cho ai lười chỉnh sửa hậu kỳ, chụp phát ăn ngay với các giả lập màu Film (Classic Chrome, Nostalgic Neg). Ngoại hình Classic Retro siêu đẹp. Máy Like New chụp chưa đến 1k shot. Còn bảo hành chính hãng Fujifilm VN.",
+        price: 19000000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(3),
+        images: [
+          "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=500",
+        ],
+        brand: "Fujifilm",
+        modelName: "X-T30 II",
+      },
+      {
+        sellerId: getUser(4),
+        category: "ACCESSORY", // Tripod -> Accessory
+        title: "Chân máy ảnh Tripod Benro T880EX",
+        description:
+          "Chân máy nhôm nhẹ nhưng chắc chắn, chịu tải 5kg. Dùng để phơi sáng chụp cảnh đêm hoặc quay video cố định. Hơi trầy chân do di chuyển nhiều đi phượt. Các khớp khóa vẫn còn chặt.",
+        price: 250000,
+        condition: "FAIR",
+        status: "ACTIVE",
+        location: getLoc(4),
+        images: [
+          "https://images.unsplash.com/photo-1470116073782-48ae244710c7?w=500",
+        ],
+        brand: "Benro",
+        modelName: "T880EX",
+      },
+
+      // CONSOLE -> Mapped to OTHER
+      {
+        sellerId: getUser(2),
+        category: "OTHER",
+        title: "Máy chơi game Sony PS5 Standard (Bản có ổ đĩa)",
+        description:
+          "Bản Standard có thể chơi game bằng đĩa hoặc Digital. Đời CFI-1200 tản nhiệt mát mẻ hơn. Kèm 2 tay cầm DualSense rung phản hồi cực sướng. Tặng kèm đĩa game God of War Ragnarok. Ít chơi do bận đi làm nên bán.",
+        price: 10500000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=500",
+        ],
+        brand: "Sony",
+        modelName: "PlayStation 5",
+      },
+      {
+        sellerId: getUser(2),
+        category: "OTHER",
+        title: "Nintendo Switch OLED đã Hack Modchip",
+        description:
+          "Máy màn hình OLED rực rỡ, chơi cầm tay (handheld) cực đã. Đã hack mod chip, cài sẵn Tinfoil tải game miễn phí trực tiếp trên máy (Zelda, Mario, Pokemon...). Thẻ nhớ 256GB chứa full game. Đã dán cường lực màn hình.",
+        price: 6800000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=500",
+        ],
+        brand: "Nintendo",
+        modelName: "Switch OLED",
+      },
+
+      // SMARTHOME -> Mapped to OTHER
+      {
+        sellerId: getUser(1),
+        category: "OTHER",
+        title: "Robot hút bụi Roborock S7 MaxV Ultra",
+        description:
+          "Robot thông minh nhất hệ mặt trời: Tự giặt giẻ, tự sấy khô, tự đổ rác, tự cấp nước. Lực hút 5100Pa hút sạch lông chó mèo. Camera AI nhận diện vật cản (dây điện, đồ chơi, phân thú cưng) để né. Mới dùng 6 tháng, giải phóng sức lao động cho chị em.",
+        price: 18500000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1583862499327-32e290d40679?w=500",
+        ],
+        brand: "Roborock",
+        modelName: "S7 MaxV Ultra",
+      },
+
+      // PC & LINH KIEN -> Mapped to ACCESSORY/OTHER
+      {
+        sellerId: getUser(2),
+        category: "ACCESSORY",
+        title: "Card màn hình VGA RTX 3070 Ti Gaming X Trio",
+        description:
+          "Hàng người dùng chơi game, cam kết không trâu cày coin. Fullbox trùng seri. Chiến mọi game AAA ở độ phân giải 2K Ultra setting. Nhiệt độ mát mẻ (Fullload 70 độ), led RGB đẹp lung linh đồng bộ Mystic Light. Còn bảo hành hãng 1 năm.",
+        price: 8500000,
+        condition: "GOOD",
+        status: "ACTIVE",
+        location: getLoc(2),
+        images: [
+          "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=500",
+        ],
+        brand: "MSI",
+        modelName: "RTX 3070 Ti",
+      },
+
+      // TV / MAN HINH -> Mapped to OTHER
+      {
+        sellerId: getUser(1),
+        category: "OTHER",
+        title: "Màn hình đồ họa LG 27UP850 4K USB-C",
+        description:
+          "Màn hình chuyên đồ họa 27 inch độ phân giải 4K siêu nét. Tấm nền IPS chuẩn màu 95% DCI-P3. Điểm đáng tiền là cổng USB-C hỗ trợ sạc ngược 96W, cắm MacBook vào là vừa xuất hình vừa sạc, bàn làm việc gọn gàng không dây nhợ. Không điểm chết, không hở sáng.",
+        price: 7500000,
+        condition: "LIKE_NEW",
+        status: "ACTIVE",
+        location: getLoc(1),
+        images: [
+          "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500",
+        ],
+        brand: "LG",
+        modelName: "27UP850",
+      },
+    ];
+
+    const items = await Item.insertMany(itemsData);
+    console.log(`📦 Created ${items.length} items`);
   } catch (err) {
-    console.error("Seed error:", err);
+    console.error("❌ Seed error:", err);
     process.exit(1);
   }
 };
 
 seedData();
-
