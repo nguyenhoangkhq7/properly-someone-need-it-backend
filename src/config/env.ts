@@ -21,8 +21,8 @@ const toStringArray = (value: string | undefined, fallback: string[]): string[] 
 
 export const env = {
   PORT: toNumber(process.env.PORT, 3000),
-  MONGO_URI: process.env.MONGO_URI ?? "mongodb://localhost:27017/psni",
-  API_PREFIX: process.env.API_PREFIX ?? "/api",
+  MONGO_URI: process.env.MONGO_URI ,
+  API_PREFIX: process.env.API_PREFIX ,
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET ?? "dev_access_secret",
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET ?? "dev_refresh_secret",
   ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "1h",
@@ -37,19 +37,18 @@ export const env = {
   AUTH_RATE_LIMIT_WINDOW_MS: toNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 5 * 60 * 1000),
   AUTH_RATE_LIMIT_MAX: toNumber(process.env.AUTH_RATE_LIMIT_MAX, 10),
 
-  // Leave SMTP empty by default so dev env falls back to console logging
-  EMAIL_FROM: process.env.EMAIL_FROM ?? "",
-  SMTP_HOST: process.env.SMTP_HOST ?? "",
+  EMAIL_FROM: process.env.EMAIL_FROM,
+  SMTP_HOST: process.env.SMTP_HOST ,
   SMTP_PORT: toNumber(process.env.SMTP_PORT, 587),
   SMTP_SECURE: toBoolean(process.env.SMTP_SECURE, false),
-  SMTP_USER: process.env.SMTP_USER ?? "",
-  SMTP_PASS: process.env.SMTP_PASS ?? "",
+  SMTP_USER: process.env.SMTP_USER ,
+  SMTP_PASS: process.env.SMTP_PASS ,
   // OpenRouter (Æ°u tiÃªn)
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
   OPENROUTER_BASE_URL:
-    process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1/embeddings",
+    process.env.OPENROUTER_BASE_URL,
   OPENROUTER_MODEL:
-    process.env.OPENROUTER_MODEL ?? "openai/text-embedding-3-small",
+    process.env.OPENROUTER_MODEL,
 };
 
 if (!env.MONGO_URI) {
