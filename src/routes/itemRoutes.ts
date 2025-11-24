@@ -113,10 +113,41 @@ router.get("/admin", requireAuth, async (req, res) => {
     console.log("Filter:", filter);
     const items = await Item.find(filter)
       .sort({ createdAt: -1 })
+      .populate({ path: "sellerId", select: "fullName" })
       .lean();
     console.log("Items fetched successfully, count:", items.length);
-    // Trả về items trực tiếp, không populate để tránh lỗi
-    return res.status(200).json(items);
+    // Đổi sellerId thành seller cho frontend dễ dùng
+    const result = items.map((item) => {
+      let seller = null;
+      if (item.sellerId && typeof item.sellerId === 'object' && 'fullName' in item.sellerId) {
+        seller = {
+          _id: item.sellerId._id,
+          fullName: item.sellerId.fullName,
+        };
+      }
+      return {
+        _id: item._id,
+        seller,
+        sellerId: item.sellerId?._id || item.sellerId,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        brand: item.brand,
+        modelName: item.modelName,
+        condition: item.condition,
+        price: item.price,
+        isNegotiable: item.isNegotiable,
+        images: item.images,
+        location: item.location,
+        status: item.status,
+        views: item.views,
+        favoritesCount: item.favoritesCount,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+    });
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Get all items error:", error); // Enhanced logging
     return res.status(500).json({ message: "Không thể lấy danh sách sản phẩm", error: error instanceof Error ? error.message : String(error) });
