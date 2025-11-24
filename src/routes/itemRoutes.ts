@@ -1,7 +1,6 @@
 ﻿import { Router, Request, Response } from "express";
 import {
   getAllItems,
-  getItemById,
   getNewItems,
   getNearbyItems,
   getRecommendedItems,
@@ -93,9 +92,7 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
     return res.status(200).json({ items });
   } catch (error) {
     console.error("Get items by seller error:", error);
-    return res
-      .status(500)
-      .json({ message: "Không thể lấy danh sách item" });
+    return res.status(500).json({ message: "Không thể lấy danh sách item" });
   }
 });
 
@@ -118,36 +115,40 @@ router.get("/:itemId", async (req: Request, res: Response) => {
 });
 
 // Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED)
-router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { itemId } = req.params;
-    const { status } = req.body as { status?: string };
+router.patch(
+  "/:itemId/status",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      const { status } = req.body as { status?: string };
 
-    const allowedStatuses = ["ACTIVE", "PENDING", "SOLD", "DELETED"] as const;
+      const allowedStatuses = ["ACTIVE", "PENDING", "SOLD", "DELETED"] as const;
 
-    if (!status || !allowedStatuses.includes(status as any)) {
-      return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      if (!status || !allowedStatuses.includes(status as any)) {
+        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      }
+
+      const item = await Item.findByIdAndUpdate(
+        itemId,
+        { status },
+        { new: true }
+      ).lean();
+
+      if (!item) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+
+      return res.status(200).json({ item });
+    } catch (error) {
+      console.error("Update item status error:", error);
+      return res
+        .status(500)
+        .json({ message: "Không thể cập nhật trạng thái sản phẩm" });
     }
-
-    const item = await Item.findByIdAndUpdate(
-      itemId,
-      { status },
-      { new: true }
-    ).lean();
-
-    if (!item) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-    }
-
-    return res.status(200).json({ item });
-  } catch (error) {
-    console.error("Update item status error:", error);
-    return res.status(500).json({ message: "Không thể cập nhật trạng thái sản phẩm" });
   }
-});
-
+);
 
 // NOTE: `getAllItems` is already mounted earlier (router.get('/', getAllItems));
 
 export default router;
-
