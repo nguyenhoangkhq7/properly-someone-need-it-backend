@@ -9,6 +9,7 @@ import {
 import { getForYou } from "../controllers/forYouController";
 import { Item } from "../models/Item";
 import requireAuth from "../middleware/requireAuth";
+import mongoose from "mongoose";
 
 const router = Router();
 
@@ -104,6 +105,63 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
       success: false,
       message: "Không thể lấy danh sách sản phẩm",
     });
+  }
+});
+
+// Lấy tất cả item (cho admin, có tên người bán, hỗ trợ lọc status)
+router.get("/admin", requireAuth, async (req, res) => {
+  try {
+    console.log("Starting /admin route, userId:", req.userId);
+    console.log("MongoDB connection state:", mongoose.connection.readyState); // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({ message: "Database not connected" });
+    }
+    const { status } = req.query;
+    const filter: { [key: string]: any } = {};
+    if (status && typeof status === "string") {
+      filter.status = status;
+    }
+    console.log("Filter:", filter);
+    const items = await Item.find(filter)
+      .sort({ createdAt: -1 })
+      .populate({ path: "sellerId", select: "fullName" })
+      .lean();
+    console.log("Items fetched successfully, count:", items.length);
+    // Đổi sellerId thành seller cho frontend dễ dùng
+    const result = items.map((item) => {
+      let seller = null;
+      if (item.sellerId && typeof item.sellerId === 'object' && 'fullName' in item.sellerId) {
+        seller = {
+          _id: item.sellerId._id,
+          fullName: item.sellerId.fullName,
+        };
+      }
+      return {
+        _id: item._id,
+        seller,
+        sellerId: item.sellerId?._id || item.sellerId,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        brand: item.brand,
+        modelName: item.modelName,
+        condition: item.condition,
+        price: item.price,
+        isNegotiable: item.isNegotiable,
+        images: item.images,
+        location: item.location,
+        status: item.status,
+        views: item.views,
+        favoritesCount: item.favoritesCount,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Get all items error:", error); // Enhanced logging
+    return res.status(500).json({ message: "Không thể lấy danh sách sản phẩm", error: error instanceof Error ? error.message : String(error) });
   }
 });
 
