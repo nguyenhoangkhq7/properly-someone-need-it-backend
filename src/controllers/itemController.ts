@@ -40,7 +40,7 @@ export const getItemById = async (req: Request, res: Response) => {
       });
     }
 
-    const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
+    const userId = req.userId;
     if (userId && Types.ObjectId.isValid(userId)) {
       ViewedItem.create({
         userId,

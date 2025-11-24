@@ -6,17 +6,23 @@ import { SearchHistory } from "../models/SearchHistory";
 
 export const getForYou = async (req: Request, res: Response) => {
   try {
-    // 1. Validation & Parsing userId
-    const userIdRaw = req.params.userId ?? req.query.userId;
-    const userIdParam = String(userIdRaw || "").trim();
-
-    if (!userIdParam || !Types.ObjectId.isValid(userIdParam)) {
-      return res.status(400).json({
+    // 1. Validation & Parsing userId (từ JWT)
+    const requesterId = req.userId;
+    if (!requesterId) {
+      return res.status(401).json({
         success: false,
-        message: "Thiếu hoặc sai định dạng userId",
+        message: "AUTH_REQUIRED",
       });
     }
-    const userId = new Types.ObjectId(userIdParam);
+
+    if (!Types.ObjectId.isValid(requesterId)) {
+      return res.status(400).json({
+        success: false,
+        message: "userId không hợp lệ",
+      });
+    }
+
+    const userId = new Types.ObjectId(requesterId);
 
     // 2. Lấy dữ liệu hành vi người dùng (Parallel Fetching)
     const [viewedDocs, historyDocs] = await Promise.all([
