@@ -10,6 +10,7 @@ import { getForYou } from "../controllers/forYouController";
 import { Item } from "../models/Item";
 import requireAuth from "../middleware/requireAuth";
 import mongoose from "mongoose";
+import { getEmbedding } from "../services/embeddingService";
 
 const router = Router();
 
@@ -56,7 +57,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       return res.status(401).json({ message: "AUTH_REQUIRED" });
     }
 
-    const item = await Item.create({
+    const item = new Item({
       sellerId,
       title,
       description,
@@ -71,6 +72,21 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       location,
       status: "PENDING",
     });
+
+    // Thêm embedding
+    try {
+      const contentParts = [title, brand, modelName, description].filter(Boolean);
+      const textToEmbed = contentParts.join("\n").trim();
+      if (textToEmbed) {
+        const embedding = await getEmbedding(textToEmbed);
+        item.embedding = embedding;
+      }
+    } catch (embedErr) {
+      console.warn("Failed to generate embedding for new item:", embedErr);
+      // Không return error, vẫn cho tạo item nhưng không có embedding
+    }
+
+    await item.save();
 
     return res.status(201).json(item);
   } catch (error) {
@@ -113,10 +129,41 @@ router.get("/admin", requireAuth, async (req, res) => {
     console.log("Filter:", filter);
     const items = await Item.find(filter)
       .sort({ createdAt: -1 })
+      .populate({ path: "sellerId", select: "fullName" })
       .lean();
     console.log("Items fetched successfully, count:", items.length);
-    // Trả về items trực tiếp, không populate để tránh lỗi
-    return res.status(200).json(items);
+    // Đổi sellerId thành seller cho frontend dễ dùng
+    const result = items.map((item) => {
+      let seller = null;
+      if (item.sellerId && typeof item.sellerId === 'object' && 'fullName' in item.sellerId) {
+        seller = {
+          _id: item.sellerId._id,
+          fullName: item.sellerId.fullName,
+        };
+      }
+      return {
+        _id: item._id,
+        seller,
+        sellerId: item.sellerId?._id || item.sellerId,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        brand: item.brand,
+        modelName: item.modelName,
+        condition: item.condition,
+        price: item.price,
+        isNegotiable: item.isNegotiable,
+        images: item.images,
+        location: item.location,
+        status: item.status,
+        views: item.views,
+        favoritesCount: item.favoritesCount,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+    });
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Get all items error:", error); // Enhanced logging
     return res.status(500).json({ message: "Không thể lấy danh sách sản phẩm", error: error instanceof Error ? error.message : String(error) });
