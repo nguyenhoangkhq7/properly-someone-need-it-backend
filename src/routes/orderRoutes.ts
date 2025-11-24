@@ -168,10 +168,16 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 });
 
 // Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
-router.patch("/:orderId/status", async (req: Request, res: Response) => {
+router.patch("/:orderId/status", requireAuth, async (req: Request, res: Response) => {
   try {
     const { orderId } = req.params as { orderId: string };
-    const { status } = req.body as { status?: string };
+    const { status, cancelReason } = req.body as { status?: string; cancelReason?: string };
+    const userId = req.userId;
+    const userRole = req.userRole;
+
+    if (!userId) {
+      return res.status(401).json({ error: "AUTH_REQUIRED" });
+    }
 
     if (!status) {
       return res.status(400).json({ error: "STATUS_REQUIRED" });
@@ -194,7 +200,28 @@ router.patch("/:orderId/status", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "ORDER_NOT_FOUND" });
     }
 
+    const isBuyer = String(order.buyerId) === String(userId);
+    const isSeller = String(order.sellerId) === String(userId);
+    const isAdmin = userRole === "admin";
+
+    if (!isBuyer && !isSeller && !isAdmin) {
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
+
     order.status = status as any;
+    if (status === "CANCELLED") {
+      if (isBuyer) {
+        order.cancelledBy = "BUYER";
+      } else if (isSeller) {
+        order.cancelledBy = "SELLER";
+      } else {
+        order.cancelledBy = undefined;
+      }
+      order.cancelReason = cancelReason;
+    } else {
+      order.cancelledBy = undefined;
+      order.cancelReason = undefined;
+    }
     await order.save();
 
     // Náº¿u chuyá»ƒn sang MEETUP_SCHEDULED thÃ¬ há»§y cÃ¡c Ä‘Æ¡n khÃ¡c cÃ¹ng itemId
