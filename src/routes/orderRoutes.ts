@@ -47,9 +47,7 @@ router.get("/buyer/:buyerId", async (req: Request, res: Response) => {
       filter.status = status;
     }
 
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
+    const orders = await Order.find(filter).sort({ createdAt: -1 }).lean();
 
     const itemIds = orders.map((o) => o.itemId).filter(Boolean);
     const sellerIds = orders.map((o) => o.sellerId).filter(Boolean);
@@ -104,9 +102,7 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
       filter.status = status;
     }
 
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
+    const orders = await Order.find(filter).sort({ createdAt: -1 }).lean();
 
     const itemIds = orders.map((o) => o.itemId).filter(Boolean);
     const buyerIds = orders.map((o) => o.buyerId).filter(Boolean);
@@ -226,7 +222,12 @@ router.post("/", async (req: Request, res: Response) => {
     const priceAtPurchase = item.price;
 
     if (typeof priceAtPurchase !== "number") {
-      return sendError(res, 400, "Giá sản phẩm không hợp lệ", "INVALID_ITEM_PRICE");
+      return sendError(
+        res,
+        400,
+        "Giá sản phẩm không hợp lệ",
+        "INVALID_ITEM_PRICE"
+      );
     }
 
     const meetupLocation = {
@@ -259,103 +260,90 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
-router.patch("/:orderId/status", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { orderId } = req.params as { orderId: string };
-    const { status, cancelReason } = req.body as { status?: string; cancelReason?: string };
-    const userId = req.userId;
-    const userRole = req.userRole;
+router.patch(
+  "/:orderId/status",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const { orderId } = req.params as { orderId: string };
+      const { status, cancelReason } = req.body as {
+        status?: string;
+        cancelReason?: string;
+      };
+      const userId = req.userId;
+      const userRole = req.userRole;
 
-    if (!userId) {
-      return res.status(401).json({ error: "AUTH_REQUIRED" });
-    }
+      if (!userId) {
+        return res.status(401).json({ error: "AUTH_REQUIRED" });
+      }
 
-    if (!status) {
-      return sendError(res, 400, "Thiếu trạng thái mới", "STATUS_REQUIRED");
-    }
+      if (!status) {
+        return res.status(400).json({ error: "STATUS_REQUIRED" });
+      }
 
-    if (!requesterId) {
-      return sendError(res, 401, "Bạn cần đăng nhập", "AUTH_REQUIRED");
-    }
+      const allowedStatus = [
+        "PENDING",
+        "NEGOTIATING",
+        "MEETUP_SCHEDULED",
+        "COMPLETED",
+        "CANCELLED",
+      ];
 
-    const allowedStatus = [
-      "PENDING",
-      "NEGOTIATING",
-      "MEETUP_SCHEDULED",
-      "COMPLETED",
-      "CANCELLED",
-    ];
+      if (!allowedStatus.includes(status)) {
+        return res.status(400).json({ error: "INVALID_STATUS" });
+      }
 
-    if (!allowedStatus.includes(status)) {
-      return sendError(res, 400, "Trạng thái không hợp lệ", "INVALID_STATUS");
-    }
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return res.status(404).json({ error: "ORDER_NOT_FOUND" });
+      }
 
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return sendError(res, 404, "Không tìm thấy đơn hàng", "ORDER_NOT_FOUND");
-    }
+      const isBuyer = String(order.buyerId) === String(userId);
+      const isSeller = String(order.sellerId) === String(userId);
+      const isAdmin = userRole === "admin";
 
-    const isParticipant = [order.buyerId, order.sellerId].some(
-      (participantId) => String(participantId) === String(requesterId)
-    );
+      if (!isBuyer && !isSeller && !isAdmin) {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
 
-    if (!isParticipant) {
-      return sendError(res, 403, "Không có quyền cập nhật", "FORBIDDEN");
-    }
-
-    const isBuyer = String(order.buyerId) === String(userId);
-    const isSeller = String(order.sellerId) === String(userId);
-    const isAdmin = userRole === "admin";
-
-    if (!isBuyer && !isSeller && !isAdmin) {
-      return res.status(403).json({ error: "FORBIDDEN" });
-    }
-
-    order.status = status as any;
-    if (status === "CANCELLED") {
-      if (isBuyer) {
-        order.cancelledBy = "BUYER";
-      } else if (isSeller) {
-        order.cancelledBy = "SELLER";
+      order.status = status as any;
+      if (status === "CANCELLED") {
+        if (isBuyer) {
+          order.cancelledBy = "BUYER";
+        } else if (isSeller) {
+          order.cancelledBy = "SELLER";
+        } else {
+          order.cancelledBy = undefined;
+        }
+        order.cancelReason = cancelReason;
       } else {
         order.cancelledBy = undefined;
+        order.cancelReason = undefined;
       }
-      order.cancelReason = cancelReason;
-    } else {
-      order.cancelledBy = undefined;
-      order.cancelReason = undefined;
-    }
-    await order.save();
+      await order.save();
 
-    // Nếu chuyển sang MEETUP_SCHEDULED thì hủy các đơn khác cùng itemId
-    if (status === "MEETUP_SCHEDULED") {
-      await Order.updateMany(
-        {
-          itemId: order.itemId,
-          _id: { $ne: order._id },
-          status: { $in: ["PENDING", "NEGOTIATING"] },
-        },
-        {
-          status: "CANCELLED",
-          cancelledBy: "SELLER",
-          cancelReason: "Another order scheduled for meetup",
-        }
-      );
-    }
+      // Náº¿u chuyá»ƒn sang MEETUP_SCHEDULED thÃ¬ há»§y cÃ¡c Ä‘Æ¡n khÃ¡c cÃ¹ng itemId
+      if (status === "MEETUP_SCHEDULED") {
+        await Order.updateMany(
+          {
+            itemId: order.itemId,
+            _id: { $ne: order._id },
+            status: { $in: ["PENDING", "NEGOTIATING"] },
+          },
+          {
+            status: "CANCELLED",
+            cancelledBy: "SELLER",
+            cancelReason: "Another order scheduled for meetup",
+          }
+        );
+      }
 
-    return sendSuccess(res, 200, "Cập nhật trạng thái đơn hàng thành công", {
-      order,
-    });
-  } catch (error) {
-    console.error("Update order status error:", error);
-    return sendError(
-      res,
-      500,
-      "Không thể cập nhật trạng thái đơn hàng",
-      "INTERNAL_SERVER_ERROR"
-    );
+      return res.status(200).json({ order });
+    } catch (error) {
+      console.error("Update order status error:", error);
+      return res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
+    }
   }
-});
+);
 
 export default router;
-
