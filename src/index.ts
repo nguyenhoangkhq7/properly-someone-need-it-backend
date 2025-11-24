@@ -13,6 +13,7 @@ import orderRoutes from "./routes/orderRoutes";
 import userRoutes from "./routes/userRoutes";
 import { requestLogger } from "./middlewares/logger";
 import { createChatGateway } from "./socket/chatGateway";
+import requireAuth from "./middleware/requireAuth";
 
 const app = express();
 connectDB();
@@ -50,7 +51,7 @@ const mountRoutes = (prefix: string) => {
   app.use(`${prefix}/search`, searchRoutes);
   app.use(`${prefix}/users`, userRoutes);
 
-  app.get(`${prefix}/health`, (_req: Request, res: Response) => {
+  app.get(`${prefix}/health`, requireAuth, (_req: Request, res: Response) => {
     res.json({ status: "ok" });
   });
 };

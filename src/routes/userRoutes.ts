@@ -1,10 +1,14 @@
 import { Router, Request, Response } from "express";
-import { getPublicProfile } from "../controllers/userController";
+import { getPublicProfile, updateMyProfile } from "../controllers/userController";
+import requireAuth from "../middleware/requireAuth";
 import { User } from "../models/User";
 
 const router = Router();
 
+router.use(requireAuth);
+
 router.get("/:id/profile", getPublicProfile);
+router.put("/me", updateMyProfile);
 
 // Lấy danh sách tất cả user
 router.get("/", async (req: Request, res: Response) => {

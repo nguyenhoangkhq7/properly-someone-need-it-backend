@@ -25,7 +25,7 @@ export const env = {
   API_PREFIX: process.env.API_PREFIX ,
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET ?? "dev_access_secret",
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET ?? "dev_refresh_secret",
-  ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "1h",
+  ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "1m",
   REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
   ALLOWED_ORIGINS: toStringArray(process.env.ALLOWED_ORIGINS, ["*"]),
   SOCKET_ALLOWED_ORIGINS: toStringArray(process.env.SOCKET_ALLOWED_ORIGINS, ["*"]),

@@ -13,6 +13,8 @@ import mongoose from "mongoose";
 
 const router = Router();
 
+router.use(requireAuth);
+
 router.get("/", getAllItems);
 router.get("/new", getNewItems);
 router.get("/nearby", getNearbyItems);
@@ -21,7 +23,7 @@ router.get("/category/:category", getItemsByCategory);
 router.get("/for-you/:userId", getForYou);
 
 // Tạo item mới
-router.post("/", requireAuth, async (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
     const {
       sellerId: _ignoredSellerId,
@@ -85,15 +87,24 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
     const { sellerId } = req.params;
 
     if (!sellerId) {
-      return res.status(400).json({ message: "Thiếu sellerId" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu sellerId" });
     }
 
     const items = await Item.find({ sellerId }).sort({ createdAt: -1 }).lean();
 
-    return res.status(200).json({ items });
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách sản phẩm thành công",
+      data: items,
+    });
   } catch (error) {
     console.error("Get items by seller error:", error);
-    return res.status(500).json({ message: "Không thể lấy danh sách item" });
+    return res.status(500).json({
+      success: false,
+      message: "Không thể lấy danh sách sản phẩm",
+    });
   }
 });
 
@@ -175,7 +186,6 @@ router.get("/:itemId", async (req: Request, res: Response) => {
 // Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED)
 router.patch(
   "/:itemId/status",
-  requireAuth,
   async (req: Request, res: Response) => {
     try {
       const { itemId } = req.params;
