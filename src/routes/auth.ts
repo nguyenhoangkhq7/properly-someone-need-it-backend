@@ -271,7 +271,11 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     setRefreshTokenCookie(res, tokens.refreshToken);
     return sendSuccess(
       res,
-      { accessToken: tokens.accessToken, role: user.role },
+      {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        role: user.role,
+      },
       "ÄÄƒng kÃ½ thÃ nh cÃ´ng"
     );
   } catch (error) {
@@ -304,7 +308,11 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     setRefreshTokenCookie(res, tokens.refreshToken);
     return sendSuccess(
       res,
-      { accessToken: tokens.accessToken, role: user.role },
+      {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        role: user.role,
+      },
       "ÄÄƒng nháº­p thÃ nh cÃ´ng"
     );
   } catch (error) {
@@ -318,7 +326,13 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
 router.post("/refresh-token", async (req: Request, res: Response) => {
   try {
-    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+    const candidateToken =
+      (typeof req.body?.refreshToken === "string" && req.body.refreshToken) ||
+      (typeof req.headers["x-refresh-token"] === "string"
+        ? (req.headers["x-refresh-token"] as string)
+        : undefined) ||
+      req.cookies?.[REFRESH_COOKIE_NAME];
+    const refreshToken = candidateToken ?? null;
     if (!refreshToken) {
       throw new AuthError("Refresh token khÃ´ng tá»“n táº¡i.", "REFRESH_INVALID", 401);
     }
@@ -348,7 +362,11 @@ router.post("/refresh-token", async (req: Request, res: Response) => {
     setRefreshTokenCookie(res, tokens.refreshToken);
     return sendSuccess(
       res,
-      { accessToken: tokens.accessToken, role: user.role },
+      {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        role: user.role,
+      },
       "Refresh thÃ nh cÃ´ng"
     );
   } catch (error) {
