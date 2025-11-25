@@ -42,11 +42,11 @@ export const getItemById = async (req: Request, res: Response) => {
 
     const userId = req.userId;
     if (userId && Types.ObjectId.isValid(userId)) {
-      ViewedItem.create({
-        userId,
-        itemId: item._id,
-        viewedAt: new Date(),
-      }).catch((err) => console.error("Log viewed item error:", err));
+      ViewedItem.findOneAndUpdate(
+        { userId, itemId: item._id },
+        { $inc: { viewCount: 1 }, $set: { viewedAt: new Date() } },
+        { upsert: true, new: true }
+      ).catch((err) => console.error("Log viewed item error:", err));
     }
 
     return res.json({

@@ -1,10 +1,11 @@
-﻿import { Router, Request, Response } from "express";
+import { Router, Request, Response } from "express";
 import {
   getAllItems,
   getNewItems,
   getNearbyItems,
   getRecommendedItems,
   getItemsByCategory,
+  getItemById,
 } from "../controllers/itemController";
 import { getForYou } from "../controllers/forYouController";
 import { Item } from "../models/Item";
@@ -24,8 +25,8 @@ router.get("/recommended/:userId", getRecommendedItems);
 router.get("/category/:category", getItemsByCategory);
 router.get("/for-you/:userId", getForYou);
 
-// Tạo item mới
-// Tạo item mới
+// Tao item moi
+// Tao item moi
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const {
@@ -53,7 +54,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       !Array.isArray(location.coordinates) ||
       location.coordinates.length !== 2
     ) {
-      return res.status(400).json({ message: "Thiếu dữ liệu bắt buộc" });
+      return res.status(400).json({ message: "Thieu du lieu bat buoc" });
     }
 
     const sellerId = req.userId as string | undefined;
@@ -77,7 +78,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       status: "PENDING",
     });
 
-    // Thêm embedding
+    // Them embedding
     try {
       const contentParts = [title, brand, modelName, description].filter(
         Boolean
@@ -89,7 +90,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       }
     } catch (embedErr) {
       console.warn("Failed to generate embedding for new item:", embedErr);
-      // Không return error, vẫn cho tạo item nhưng không có embedding
+      // Khong return error, van cho tao item nhung khong co embedding
     }
 
     await item.save();
@@ -97,11 +98,11 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     return res.status(201).json(item);
   } catch (error) {
     console.error("Create item error:", error);
-    return res.status(500).json({ message: "Không thể tạo item" });
+    return res.status(500).json({ message: "Khong the tao item" });
   }
 });
 
-// Lấy danh sách item theo sellerId
+// Lay danh sach item theo sellerId
 router.get("/seller/:sellerId", async (req: Request, res: Response) => {
   try {
     const { sellerId } = req.params;
@@ -109,35 +110,35 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
     if (!sellerId) {
       return res
         .status(400)
-        .json({ success: false, message: "Thiếu sellerId" });
+        .json({ success: false, message: "Thieu sellerId" });
     }
 
     const items = await Item.find({ sellerId }).sort({ createdAt: -1 }).lean();
 
     return res.status(200).json({
       success: true,
-      message: "Lấy danh sách sản phẩm thành công",
+      message: "Lay danh sach san pham thanh cong",
       data: items,
     });
   } catch (error) {
     console.error("Get items by seller error:", error);
     return res.status(500).json({
       success: false,
-      message: "Không thể lấy danh sách sản phẩm",
+      message: "Khong the lay danh sach san pham",
     });
   }
 });
 
-// Lấy tất cả item (cho admin, có tên người bán, hỗ trợ lọc status)
+// Lay tat ca item (cho admin, co ten nguoi ban, ho tro loc status)
 router.get("/admin", requireAuth, async (req, res) => {
   try {
     console.log("Starting /admin route, userId:", req.userId);
-    console.log("MongoDB connection state:", mongoose.connection.readyState); // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    console.log("MongoDB connection state:", mongoose.connection.readyState);
 
-    // Kiểm tra role admin
+    // Kiem tra role admin
     const user = await User.findById(req.userId);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: "Không có quyền truy cập" });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Khong co quyen truy cap" });
     }
 
     if (mongoose.connection.readyState !== 1) {
@@ -154,7 +155,7 @@ router.get("/admin", requireAuth, async (req, res) => {
       .populate({ path: "sellerId", select: "fullName" })
       .lean();
     console.log("Items fetched successfully, count:", items.length);
-    // Đổi sellerId thành seller cho frontend dễ dùng
+    // Doi sellerId thanh seller cho frontend de dung
     const result = items.map((item) => {
       let seller = null;
       if (
@@ -163,14 +164,14 @@ router.get("/admin", requireAuth, async (req, res) => {
         "fullName" in item.sellerId
       ) {
         seller = {
-          _id: item.sellerId._id,
-          fullName: item.sellerId.fullName,
+          _id: (item.sellerId as any)._id,
+          fullName: (item.sellerId as any).fullName,
         };
       }
       return {
         _id: item._id,
         seller,
-        sellerId: item.sellerId?._id || item.sellerId,
+        sellerId: (item as any).sellerId?._id || item.sellerId,
         title: item.title,
         description: item.description,
         category: item.category,
@@ -191,39 +192,23 @@ router.get("/admin", requireAuth, async (req, res) => {
     });
     return res.status(200).json(result);
   } catch (error) {
-    console.error("Get all items error:", error); // Enhanced logging
+    console.error("Get all items error:", error);
     return res.status(500).json({
-      message: "Không thể lấy danh sách sản phẩm",
+      message: "Khong the lay danh sach san pham",
       error: error instanceof Error ? error.message : String(error),
     });
   }
 });
 
-// Lấy chi tiết 1 item theo id
-router.get("/:itemId", async (req: Request, res: Response) => {
-  try {
-    const { itemId } = req.params;
-
-    const item = await Item.findById(itemId).lean();
-
-    if (!item) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-    }
-
-    return res.status(200).json({ item });
-  } catch (error) {
-    console.error("Get item detail error:", error);
-    return res.status(500).json({ message: "Không thể lấy chi tiết sản phẩm" });
-  }
-});
-
-// Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED) - chỉ admin
+// Lay chi tiet 1 item theo id (co log ViewedItem)
+router.get("/:id", getItemById);
+// Cap nhat trang thai item (ACTIVE, PENDING, SOLD, DELETED) - chi admin
 router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response) => {
   try {
-    // Kiểm tra role admin
+    // Kiem tra role admin
     const user = await User.findById(req.userId);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: "Không có quyền truy cập" });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Khong co quyen truy cap" });
     }
 
     const { itemId } = req.params;
@@ -232,7 +217,7 @@ router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response)
     const allowedStatuses = ["ACTIVE", "PENDING", "SOLD", "DELETED"] as const;
 
     if (!status || !allowedStatuses.includes(status as any)) {
-      return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      return res.status(400).json({ message: "Trang thai khong hop le" });
     }
 
     const item = await Item.findByIdAndUpdate(
@@ -242,7 +227,7 @@ router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response)
     ).lean();
 
     if (!item) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      return res.status(404).json({ message: "Khong tim thay san pham" });
     }
 
     return res.status(200).json({ item });
@@ -250,7 +235,7 @@ router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response)
     console.error("Update item status error:", error);
     return res
       .status(500)
-      .json({ message: "Không thể cập nhật trạng thái sản phẩm" });
+      .json({ message: "Khong the cap nhat trang thai san pham" });
   }
 });
 
