@@ -322,6 +322,11 @@ router.patch(
       }
       await order.save();
 
+      // Nếu chuyển sang COMPLETED thì cập nhật item thành SOLD
+      if (status === "COMPLETED") {
+        await Item.findByIdAndUpdate(order.itemId, { status: "SOLD" });
+      }
+
       // Náº¿u chuyá»ƒn sang MEETUP_SCHEDULED thÃ¬ há»§y cÃ¡c Ä‘Æ¡n khÃ¡c cÃ¹ng itemId
       if (status === "MEETUP_SCHEDULED") {
         await Order.updateMany(

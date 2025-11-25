@@ -8,6 +8,7 @@ import {
 } from "../controllers/itemController";
 import { getForYou } from "../controllers/forYouController";
 import { Item } from "../models/Item";
+import { User } from "../models/User";
 import requireAuth from "../middleware/requireAuth";
 import mongoose from "mongoose";
 import { getEmbedding } from "../services/embeddingService";
@@ -132,6 +133,13 @@ router.get("/admin", requireAuth, async (req, res) => {
   try {
     console.log("Starting /admin route, userId:", req.userId);
     console.log("MongoDB connection state:", mongoose.connection.readyState); // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     if (mongoose.connection.readyState !== 1) {
       return res.status(500).json({ message: "Database not connected" });
     }
@@ -209,9 +217,15 @@ router.get("/:itemId", async (req: Request, res: Response) => {
   }
 });
 
-// Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED)
-router.patch("/:itemId/status", async (req: Request, res: Response) => {
+// Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED) - chỉ admin
+router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response) => {
   try {
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     const { itemId } = req.params;
     const { status } = req.body as { status?: string };
 
