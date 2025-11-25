@@ -302,7 +302,26 @@ export const semanticSearch = async (req: Request, res: Response) => {
     // 5. Fetch Candidates (Projection Optimization)
     const candidates = await Item.find(filter)
       .select(
-        "_id title description category brand modelName price images embedding"
+        [
+          "_id",
+          "title",
+          "description",
+          "category",
+          "subcategory",
+          "brand",
+          "modelName",
+          "condition",
+          "price",
+          "isNegotiable",
+          "images",
+          "location",
+          "sellerId",
+          "status",
+          "favoritesCount",
+          "views",
+          "createdAt",
+          "embedding",
+        ].join(" ")
       )
       .lean()
       .exec();
