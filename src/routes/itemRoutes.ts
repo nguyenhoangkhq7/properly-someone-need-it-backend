@@ -8,11 +8,14 @@ import {
 } from "../controllers/itemController";
 import { getForYou } from "../controllers/forYouController";
 import { Item } from "../models/Item";
+import { User } from "../models/User";
 import requireAuth from "../middleware/requireAuth";
 import mongoose from "mongoose";
 import { getEmbedding } from "../services/embeddingService";
 
 const router = Router();
+
+router.use(requireAuth);
 
 router.get("/", getAllItems);
 router.get("/new", getNewItems);
@@ -21,6 +24,7 @@ router.get("/recommended/:userId", getRecommendedItems);
 router.get("/category/:category", getItemsByCategory);
 router.get("/for-you/:userId", getForYou);
 
+// Tạo item mới
 // Tạo item mới
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -75,7 +79,9 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
     // Thêm embedding
     try {
-      const contentParts = [title, brand, modelName, description].filter(Boolean);
+      const contentParts = [title, brand, modelName, description].filter(
+        Boolean
+      );
       const textToEmbed = contentParts.join("\n").trim();
       if (textToEmbed) {
         const embedding = await getEmbedding(textToEmbed);
@@ -101,15 +107,24 @@ router.get("/seller/:sellerId", async (req: Request, res: Response) => {
     const { sellerId } = req.params;
 
     if (!sellerId) {
-      return res.status(400).json({ message: "Thiếu sellerId" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu sellerId" });
     }
 
     const items = await Item.find({ sellerId }).sort({ createdAt: -1 }).lean();
 
-    return res.status(200).json({ items });
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách sản phẩm thành công",
+      data: items,
+    });
   } catch (error) {
     console.error("Get items by seller error:", error);
-    return res.status(500).json({ message: "Không thể lấy danh sách item" });
+    return res.status(500).json({
+      success: false,
+      message: "Không thể lấy danh sách sản phẩm",
+    });
   }
 });
 
@@ -118,6 +133,13 @@ router.get("/admin", requireAuth, async (req, res) => {
   try {
     console.log("Starting /admin route, userId:", req.userId);
     console.log("MongoDB connection state:", mongoose.connection.readyState); // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     if (mongoose.connection.readyState !== 1) {
       return res.status(500).json({ message: "Database not connected" });
     }
@@ -135,7 +157,11 @@ router.get("/admin", requireAuth, async (req, res) => {
     // Đổi sellerId thành seller cho frontend dễ dùng
     const result = items.map((item) => {
       let seller = null;
-      if (item.sellerId && typeof item.sellerId === 'object' && 'fullName' in item.sellerId) {
+      if (
+        item.sellerId &&
+        typeof item.sellerId === "object" &&
+        "fullName" in item.sellerId
+      ) {
         seller = {
           _id: item.sellerId._id,
           fullName: item.sellerId.fullName,
@@ -166,7 +192,10 @@ router.get("/admin", requireAuth, async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("Get all items error:", error); // Enhanced logging
-    return res.status(500).json({ message: "Không thể lấy danh sách sản phẩm", error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      message: "Không thể lấy danh sách sản phẩm",
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -188,40 +217,42 @@ router.get("/:itemId", async (req: Request, res: Response) => {
   }
 });
 
-// Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED)
-router.patch(
-  "/:itemId/status",
-  requireAuth,
-  async (req: Request, res: Response) => {
-    try {
-      const { itemId } = req.params;
-      const { status } = req.body as { status?: string };
-
-      const allowedStatuses = ["ACTIVE", "PENDING", "SOLD", "DELETED"] as const;
-
-      if (!status || !allowedStatuses.includes(status as any)) {
-        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
-      }
-
-      const item = await Item.findByIdAndUpdate(
-        itemId,
-        { status },
-        { new: true }
-      ).lean();
-
-      if (!item) {
-        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-      }
-
-      return res.status(200).json({ item });
-    } catch (error) {
-      console.error("Update item status error:", error);
-      return res
-        .status(500)
-        .json({ message: "Không thể cập nhật trạng thái sản phẩm" });
+// Cập nhật trạng thái item (ACTIVE, PENDING, SOLD, DELETED) - chỉ admin
+router.patch("/:itemId/status", requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
     }
+
+    const { itemId } = req.params;
+    const { status } = req.body as { status?: string };
+
+    const allowedStatuses = ["ACTIVE", "PENDING", "SOLD", "DELETED"] as const;
+
+    if (!status || !allowedStatuses.includes(status as any)) {
+      return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+    }
+
+    const item = await Item.findByIdAndUpdate(
+      itemId,
+      { status },
+      { new: true }
+    ).lean();
+
+    if (!item) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    return res.status(200).json({ item });
+  } catch (error) {
+    console.error("Update item status error:", error);
+    return res
+      .status(500)
+      .json({ message: "Không thể cập nhật trạng thái sản phẩm" });
   }
-);
+});
 
 // NOTE: `getAllItems` is already mounted earlier (router.get('/', getAllItems));
 

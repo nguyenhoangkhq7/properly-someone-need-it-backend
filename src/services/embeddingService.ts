@@ -8,15 +8,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export const getEmbedding = async (text: string): Promise<number[]> => {
   if (!text.trim()) return [];
 
+  const { OPENROUTER_BASE_URL, OPENROUTER_MODEL, OPENROUTER_API_KEY } = env;
+  if (!OPENROUTER_BASE_URL || !OPENROUTER_MODEL || !OPENROUTER_API_KEY) {
+    throw new Error("Thiếu cấu hình OpenRouter để tạo embedding.");
+  }
+
   let lastErr: unknown;
   for (let attempt = 1; attempt <= MAX_RETRY; attempt += 1) {
     try {
       const response = await axios.post(
-        env.OPENROUTER_BASE_URL,
-        { model: env.OPENROUTER_MODEL, input: text },
+        OPENROUTER_BASE_URL,
+        { model: OPENROUTER_MODEL, input: text },
         {
           headers: {
-            Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
             "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
             "X-Title": process.env.APP_NAME || "PSNI-Backend",
           },

@@ -8,6 +8,8 @@ import { Order } from "../models/Order";
 
 const router = Router();
 
+router.use(requireAuth);
+
 const buildStats = (ratings: number[]) => {
   const total = ratings.length;
   if (!total) {
@@ -41,7 +43,7 @@ router.get("/:sellerId", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/eligible/:sellerId", requireAuth, async (req: Request, res: Response) => {
+router.get("/eligible/:sellerId", async (req: Request, res: Response) => {
   try {
     const { sellerId } = req.params;
     const buyerId = req.userId;
@@ -113,7 +115,7 @@ router.get("/eligible/:sellerId", requireAuth, async (req: Request, res: Respons
   }
 });
 
-router.post("/", requireAuth, async (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
     const { sellerId, rating, comment, images } = req.body ?? {};
     if (!sellerId || !isValidObjectId(sellerId)) {

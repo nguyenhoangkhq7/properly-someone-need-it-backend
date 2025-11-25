@@ -1,14 +1,24 @@
 import { Router, Request, Response } from "express";
-import { getPublicProfile } from "../controllers/userController";
+import { getPublicProfile, updateMyProfile } from "../controllers/userController";
+import requireAuth from "../middleware/requireAuth";
 import { User } from "../models/User";
 
 const router = Router();
 
-router.get("/:id/profile", getPublicProfile);
+router.use(requireAuth);
 
-// Lấy danh sách tất cả user
-router.get("/", async (req: Request, res: Response) => {
+router.get("/:id/profile", getPublicProfile);
+router.put("/me", updateMyProfile);
+
+// Lấy danh sách tất cả user (chỉ admin)
+router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     const users = await User.find().sort({ createdAt: -1 }).lean();
     return res.status(200).json(users);
   } catch (error) {
@@ -17,24 +27,36 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-// Lấy chi tiết user theo id
-router.get("/:userId", async (req: Request, res: Response) => {
+// Lấy chi tiết user theo id (chỉ admin)
+router.get("/:userId", requireAuth, async (req: Request, res: Response) => {
   try {
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     const { userId } = req.params;
-    const user = await User.findById(userId).lean();
-    if (!user) {
+    const targetUser = await User.findById(userId).lean();
+    if (!targetUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
-    return res.status(200).json(user);
+    return res.status(200).json(targetUser);
   } catch (error) {
     console.error("Get user detail error:", error);
     return res.status(500).json({ message: "Không thể lấy chi tiết người dùng" });
   }
 });
 
-// Cập nhật trạng thái chặn/mở chặn user
-router.patch("/:userId/ban", async (req: Request, res: Response) => {
+// Cập nhật trạng thái chặn/mở chặn user (chỉ admin)
+router.patch("/:userId/ban", requireAuth, async (req: Request, res: Response) => {
   try {
+    // Kiểm tra role admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Không có quyền truy cập" });
+    }
+
     const { userId } = req.params;
     const { isBanned } = req.body as { isBanned?: boolean };
     if (typeof isBanned !== "boolean") {
@@ -43,11 +65,11 @@ router.patch("/:userId/ban", async (req: Request, res: Response) => {
     const update = isBanned
       ? { isBanned: true, bannedAt: new Date() }
       : { isBanned: false, $unset: { bannedAt: 1 } };
-    const user = await User.findByIdAndUpdate(userId, update, { new: true }).lean();
-    if (!user) {
+    const targetUser = await User.findByIdAndUpdate(userId, update, { new: true }).lean();
+    if (!targetUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
-    return res.status(200).json(user);
+    return res.status(200).json(targetUser);
   } catch (error) {
     console.error("Update user ban status error:", error);
     return res.status(500).json({ message: "Không thể cập nhật trạng thái người dùng" });

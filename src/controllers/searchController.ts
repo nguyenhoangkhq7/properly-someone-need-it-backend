@@ -252,7 +252,7 @@ export const semanticSearch = async (req: Request, res: Response) => {
   try {
     // 1. Input Handling
     const rawQuery = (req.query.q ?? req.query.query ?? "").toString().trim();
-    const userId = (req.query.userId ?? req.query.u ?? "").toString().trim();
+    const userId = req.userId ?? "";
     const limit = Math.min(Number(req.query.limit ?? 20), 50);
 
     if (!rawQuery) {
