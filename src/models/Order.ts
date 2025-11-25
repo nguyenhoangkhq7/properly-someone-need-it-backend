@@ -84,4 +84,3 @@ orderSchema.index({ sellerId: 1 });
 orderSchema.index({ status: 1 });
 
 export const Order = model<IOrder>("Order", orderSchema);
-
